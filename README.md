@@ -60,7 +60,7 @@ This will ignore all semicolon errors in the entire file.
 
 - Fixed a few more semicolon detection bugs
 
-## 0.1.3 - 2/1/25
+## 0.2.0 - 2/1/25
 
 - Added a new setting: force-semicolon.lintType for deciding if VS Code should give an error, warning, or info dialogue (default is error)
 - ignore and ignore-all quick fixes
