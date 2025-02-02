@@ -2,13 +2,25 @@ import * as vscode from 'vscode';
 
 var debug: boolean = false;
 var allowFileAction: boolean = false;
+const useRegex: boolean = false;
+
 var defaultSeverity = 'error';
 var message: string = "No semicolon found.";
+
+const regex: RegExp = /^(?!\..*)(?!.*[\{\}\(\):,/*]).*[^;]$/;
 var config = vscode.workspace.getConfiguration('force-semicolon');
 
 function print(input: any) {
     if (debug) {
         console.log("force-semicolon: " + input);
+    }
+}
+
+function validText(input: string): boolean {
+    if (useRegex) {
+        return regex.test(input);
+    } else {
+        return !(input.endsWith('{') || input.endsWith('}') || input.endsWith('(') || input.endsWith(':') || input.endsWith(',') || input.endsWith('/*') || input.endsWith('*/')) && !(input.endsWith(';')) && !(input.startsWith('.'));
     }
 }
 
@@ -199,7 +211,7 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
                 }
             } else {
                 lineText = removeCommentsOutsideStrings(lineText).trim();
-                if (!(lineText.endsWith('{') || lineText.endsWith('}') || lineText.endsWith('(') || lineText.endsWith(':') || lineText.endsWith(',') || lineText.endsWith('/*') || lineText.endsWith('*/')) && !(lineText.endsWith(';')) && (handleParentheses(document, i))) {
+                if (validText(lineText) && handleParentheses(document, i)) {
                     const lineLength = origLineText.length;
                     const lastCharPosition = new vscode.Position(i, lineLength - 1);
                     const range = new vscode.Range(lastCharPosition, lastCharPosition);

@@ -65,6 +65,10 @@ This will ignore all semicolon errors in the entire file.
 - Added a new setting: force-semicolon.lintType for deciding if VS Code should give an error, warning, or info dialogue (default is error)
 - ignore and ignore-all quick fixes
 
+## 0.2.1 - 2/1/25
+
+- Fixed a bug affecting .property() lines of code
+
 # Known issues
 
 - The extension will detect a false positive for items in JSON-map/-sets that do not end in a comma
