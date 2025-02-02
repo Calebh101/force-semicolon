@@ -19,13 +19,13 @@ function print(input: any) {
 function validText(input: string, document: vscode.TextDocument, index: number): boolean {
     const nextLine = getNextRelevantLine(document, index);
     if (input.endsWith(')') && nextLine && nextLine.trim().startsWith('.')) {
-        return false; // No semicolon needed
+        return false;
     }
 
     if (useRegex) {
         return regex.test(input);
     } else {
-        return !(input.endsWith('{') || input.endsWith('}') || input.endsWith('(') || input.endsWith(':') || input.endsWith(',') || input.endsWith('/*') || input.endsWith('*/')) && !(input.endsWith(';')) && !(input.startsWith('.'));
+        return !(input.endsWith('{') || input.endsWith('}') || input.endsWith('[') || input.endsWith('(') || input.endsWith(':') || input.endsWith(',') || input.endsWith('/*') || input.endsWith('*/')) && !(input.endsWith(';')) && !(input.startsWith('.'));
     }
 }
 
@@ -33,12 +33,11 @@ function getNextRelevantLine(document: vscode.TextDocument, currentLine: number)
     for (let i = currentLine + 1; i < document.lineCount; i++) {
         let lineText = document.lineAt(i).text.trim();
 
-        // Ignore empty lines and full-line comments
         if (lineText.length > 0 && !lineText.startsWith('//')) {
             return lineText;
         }
     }
-    return ''; // No relevant line found
+    return '';
 }
 
 function getSeverity(input: string): vscode.DiagnosticSeverity {
