@@ -1,6 +1,8 @@
 # What is this?
 
-This extension is a quick extension I made to enforce good coding habits and make you put a semicolon at the end of your JavaScript and TypeScript code lines.
+This extension is a simple extension I made to enforce good coding habits and make you put a semicolon at the end of your JavaScript and TypeScript code lines.
+
+Supports multiline files (doesn't work on single-line files).
 
 This extension is in beta, so be aware that it might not always be perfect. Expect a lot of small releases until this extension exits beta.
 
@@ -69,6 +71,15 @@ This will ignore all semicolon errors in the entire file.
 
 - Fixed a bug affecting .property() lines of code
 
+## 0.2.2 - 2/1/25
+
+- Bug fix affecting chained promises
+- Updated documentation
+
 # Known issues
 
-- The extension will detect a false positive for items in JSON-map/-sets that do not end in a comma
+- The extension will detect a false positive for items in JSON-maps/sets that do not end in a comma
+
+# Is this perfect?
+
+No! This project may give false positives for several scenarios, because I can't test everything! Any contribution is greatly appreciated.

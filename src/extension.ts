@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-var debug: boolean = false;
+var debug: boolean = true;
 var allowFileAction: boolean = false;
 const useRegex: boolean = false;
 
@@ -16,12 +16,29 @@ function print(input: any) {
     }
 }
 
-function validText(input: string): boolean {
+function validText(input: string, document: vscode.TextDocument, index: number): boolean {
+    const nextLine = getNextRelevantLine(document, index);
+    if (input.endsWith(')') && nextLine && nextLine.trim().startsWith('.')) {
+        return false; // No semicolon needed
+    }
+
     if (useRegex) {
         return regex.test(input);
     } else {
         return !(input.endsWith('{') || input.endsWith('}') || input.endsWith('(') || input.endsWith(':') || input.endsWith(',') || input.endsWith('/*') || input.endsWith('*/')) && !(input.endsWith(';')) && !(input.startsWith('.'));
     }
+}
+
+function getNextRelevantLine(document: vscode.TextDocument, currentLine: number): string {
+    for (let i = currentLine + 1; i < document.lineCount; i++) {
+        let lineText = document.lineAt(i).text.trim();
+
+        // Ignore empty lines and full-line comments
+        if (lineText.length > 0 && !lineText.startsWith('//')) {
+            return lineText;
+        }
+    }
+    return ''; // No relevant line found
 }
 
 function getSeverity(input: string): vscode.DiagnosticSeverity {
@@ -138,7 +155,7 @@ function handleParentheses(document: vscode.TextDocument, lineIndex: number): bo
             return handleParentheses(document, lineIndex);
     }
 
-    for (let i = 0; i < lineIndex; i++) {
+    for (let i = 0; i <= lineIndex; i++) {
         const lineText = document.lineAt(i).text;
         encounter = 0;
         
@@ -211,7 +228,7 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
                 }
             } else {
                 lineText = removeCommentsOutsideStrings(lineText).trim();
-                if (validText(lineText) && handleParentheses(document, i)) {
+                if (validText(lineText, document, i) && handleParentheses(document, i)) {
                     const lineLength = origLineText.length;
                     const lastCharPosition = new vscode.Position(i, lineLength - 1);
                     const range = new vscode.Range(lastCharPosition, lastCharPosition);
