@@ -96,7 +96,7 @@ This will ignore all semicolon errors in the entire file.
 - Bug fix affecting lines ending in `[`
 - Bug fix affecting multiline comments
 
-## 0.3.0 - 2/4/25
+## 0.3.0 - 2/5/25
 
 - Complete overhaul of verification system.
     - We switched over from line-based and text-based scanning to AST-based scanning. This not only improves accuracy, it allows the extension to scan single-line files and accurately find incorrect/missing semicolons.

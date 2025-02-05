@@ -1,10 +1,10 @@
 {
   "name": "force-semicolon",
-  "displayName": "Force Semicolon (Beta)",
-  "description": "Force semicolons at the end of lines in JavaScript and TypeScript. Does not require ESLint.",
+  "displayName": "Force Semicolon",
+  "description": "Forces semicolons to be used at the end of statements in JavaScript and TypeScript. Does not require ESLint.",
   "repository": "https://github.com/Calebh101/force-semicolon",
   "publisher": "Calebh101",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "icon": "images/iconsmall.png",
   "engines": {
     "vscode": "^1.96.0"
