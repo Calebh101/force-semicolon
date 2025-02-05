@@ -4,7 +4,7 @@
   "description": "Helps you use semicolons correctly in JavaScript and TypeScript.",
   "repository": "https://github.com/Calebh101/force-semicolon",
   "publisher": "Calebh101",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "icon": "images/iconsmall.png",
   "engines": {
     "vscode": "^1.96.0"

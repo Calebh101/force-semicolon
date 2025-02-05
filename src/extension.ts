@@ -6,7 +6,6 @@ var mode: number = 2;
 var debug: boolean = false;
 var html: boolean = false;
 var allowFileAction: boolean = false;
-var useRegex: boolean = false;
 
 var defaultSeverity = 'error';
 var diagnosticSource = 'force-semicolon';
@@ -14,28 +13,35 @@ var noSemicolonMessage: string = "Missing or invalid semicolon.";
 var unnecessarySemicolonMessage: string = 'Unnecessary semicolon.';
 var extraSemicolonMessage: string = 'Extra semicolon.';
 
-var regex: RegExp = /^(?!\..*)(?!.*[\{\}\(\):,/*]).*[^;]$/;
 var defaultReport = {"0": [], "-1": []};
 var report: { [key: string]: any } = defaultReport;
 
 function print(input: any, attachment?: any) {
     if (debug) {
-        console.log("force-semicolon: " + input, attachment ?? 0);
+        console.log("force-semicolon: log: " + input, attachment ?? 0);
     }
 }
 
 function warn(input: any, attachment?: any) {
     if (debug) {
-        console.warn("force-semicolon: " + input, attachment ?? -1);
+        console.warn("force-semicolon: warn: " + input, attachment ?? -1);
     }
 }
 
 function printReport(file: string, report: any) {
-    print("force-semicolon: report is ready (file: " + file + ")", report);
+    if (debug) {
+        console.log("force-semicolon: report: report is ready (file: " + file + ")", report);
+    }
 }
 
 function error(input: any, attachment?: any) {
-    console.error("force-semicolon: " + input, attachment ?? -1);
+    console.error("force-semicolon: error: " + input, attachment ?? -1);
+}
+
+function action(input: any, attachment?: any) {
+    if (debug) {
+        console.log("force-semicolon: action: " + input, attachment);
+    }
 }
 
 function extractText(document: vscode.TextDocument): string | null {
@@ -80,16 +86,9 @@ function parseAst(document: vscode.TextDocument): any {
 
 function handle(index: number, text: string, document: vscode.TextDocument): object {
     if (mode === 1) {
-        text = removeCommentsOutsideStrings(text).trim();
-        var valid = validText(text, document, index);
-        var parentheses = handleParentheses(document, index);
-        var comments = handleUnclosedComments(document, index);
-        var output: boolean = valid && parentheses && !comments;
         return { 
-            result: output, 
-            validText: valid, 
-            parenthesis: parentheses,
-            comments: comments 
+            result: false, 
+            error: "mode 1 is deprecated",
         };
     } else if (mode === 2) {
         var diagnosticsList: Array<any> = [];
@@ -153,10 +152,10 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     var isInLoopHead = Boolean(path.findParent((parent: any) => isVariableDeclaration && (parent.isForStatement() || parent.isForOfStatement() || parent.isForInStatement()) && path.key === "left"));
                     var isInObjectProperty = Boolean(path.findParent((parent: any) => parent.isObjectProperty()));
                     var isAsyncFunctionExpression = isFunctionExpression && path.node.async;
+                    var isFunctionArgument = (path.isFunctionExpression() || path.isArrowFunctionExpression()) && path.parentPath?.isCallExpression() && path.key !== "callee";
 
                     var { line, column } = node.loc.end;
                     var lineM = line - 1;
-                    var lineP = line - 1;
                     var columnM = column - 1;
                     var columnP = column + 1;
 
@@ -171,7 +170,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     const start = new vscode.Position(lineM, columnP);
                     const end = new vscode.Position(lineM, columnM);
 
-                    if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isExportNamedDeclaration && !isExportDefaultDeclaration && !isCallExpression) {
+                    if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isExportNamedDeclaration && !isExportDefaultDeclaration && !isFunctionArgument) {
                         modeS = 1;
                     } else if ((isIfStatement || isWhileStatement || isForStatement || isSwitchStatement || isDoWhileStatement || isFunctionDeclaration || isTryStatement || isClassDeclaration || isClassMethod) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression) {
                         modeS = 2;
@@ -206,6 +205,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                         isClassMethod,
                         isAsyncFunctionExpression,
                         isCallExpression,
+                        isFunctionArgument,
                     });
                 }
             },
@@ -260,32 +260,11 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
             comments: comments,
         };
     } else {
-        throw new Error("handle: invalid mode: " + mode);
+        error("handle: invalid mode: " + mode);
+        return {
+            diagnostics: [],
+        };
     }
-}
-
-function validText(input: string, document: vscode.TextDocument, index: number): boolean {
-    const nextLine = getNextRelevantLine(document, index);
-    if (input.endsWith(')') && nextLine && nextLine.trim().startsWith('.')) {
-        return false;
-    }
-
-    if (useRegex) {
-        return regex.test(input);
-    } else {
-        return !(input.endsWith('{') || input.endsWith('}') || input.endsWith('[') || input.endsWith('(') || input.endsWith(':') || input.endsWith(',') || input.endsWith('/*') || input.endsWith('*/')) && !(input.endsWith(';')) && !(input.startsWith('.'));
-    }
-}
-
-function getNextRelevantLine(document: vscode.TextDocument, currentLine: number): string {
-    for (let i = currentLine + 1; i < document.lineCount; i++) {
-        let lineText = document.lineAt(i).text.trim();
-
-        if (lineText.length > 0 && !lineText.startsWith('//')) {
-            return lineText;
-        }
-    }
-    return '';
 }
 
 function getSeverity(input: string): vscode.DiagnosticSeverity | null {
@@ -317,7 +296,7 @@ export function activate(context: vscode.ExtensionContext) {
     const editor = vscode.window.activeTextEditor;
 
     if (editor) {
-        print("action: extension.activate");
+        action('extension.active');
         updateDiagnostics(editor.document, diagnostics);
         analyzeAll(diagnostics);
     }
@@ -330,12 +309,12 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     vscode.workspace.onDidOpenTextDocument((document) => {
-        print("action: workspace.onDidOpenTextDocument");
+        action('workspace.onDidOpenTextDocument');
         updateDiagnostics(document, diagnostics);
     });
 
     vscode.window.onDidChangeActiveTextEditor(editor => {
-        print("action: window.onDidChangeActiveTextEditor");
+        action('window.onDidChangeActivateTextEditor');
         if (editor) {
             updateDiagnostics(editor.document, diagnostics);
         }
@@ -350,7 +329,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     let analyzeAllCommand = vscode.commands.registerCommand('force-semicolon.analyzeAll', () => {
-        print("action: command.force-semicolon.analyzeAll");
+        action('command.activate.analyzeAll');
         analyzeAll(diagnostics);
     });
 
@@ -368,7 +347,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function fileAction(name: string, diagnostics: vscode.DiagnosticCollection) {
-    print("action: " + name + " (fileAction: " + allowFileAction + ")");
+    action(name + " (fileAction: " + allowFileAction + ")");
     if (allowFileAction) {
         analyzeAll(diagnostics);
     }
@@ -384,106 +363,11 @@ function analyzeAll(diagnostics: vscode.DiagnosticCollection) {
     });
 }
 
-function handleParentheses(document: vscode.TextDocument, lineIndex: number): boolean {
-    let type = "rounded";
-    let openParenthesesCount: number = 0;
-    let encounter: number = 0;
-
-    let open = '';
-    let close = '';
-
-    switch (type) {
-        case 'rounded': 
-            open = '(';
-            close = ')';
-            break;
-        case 'curved':
-            open = '{';
-            close = '}';
-            break;
-        default:
-            return handleParentheses(document, lineIndex);
-    }
-
-    let inString = false;
-    let stringDelimiter = '';
-    
-    for (let i = 0; i <= lineIndex; i++) {
-        const lineText = document.lineAt(i).text;
-        encounter = 0;
-
-        for (let charIndex = 0; charIndex < lineText.length; charIndex++) {
-            const char = lineText[charIndex];
-
-            if ((char === '"' || char === "'") && (charIndex === 0 || lineText[charIndex - 1] !== '\\')) {
-                if (!inString) {
-                    inString = true;
-                    stringDelimiter = char;
-                } else if (char === stringDelimiter) {
-                    inString = false;
-                }
-                continue;
-            }
-
-            if (!inString) {
-                if (char === open) {
-                    openParenthesesCount++;
-                } else if (char === close) {
-                    openParenthesesCount--;
-                }
-
-                if (type === "rounded" && char === '{') {
-                    encounter++;
-                }
-
-                if (type === "rounded" && char === '}') {
-                    encounter--;
-                }
-            }
-
-            if (openParenthesesCount < 0) {
-                return false;
-            }
-        }
-    }
-
-    let condition: boolean = openParenthesesCount === 0;
-    let encountered: boolean = encounter > 0;
-
-    if (encounter) {
-        return true;
-    } else {
-        return condition;
-    }
-}
-
-function handleUnclosedComments(document: vscode.TextDocument, lineIndex: number): boolean {
-    let commentOpenCount = 0;
-
-    for (let i = 0; i <= lineIndex; i++) {
-        const lineText = document.lineAt(i).text;
-
-        let startIndex = 0;
-        while ((startIndex = lineText.indexOf('/*', startIndex)) !== -1) {
-            commentOpenCount++;
-            startIndex += 2;
-        }
-
-        let endIndex = 0;
-        while ((endIndex = lineText.indexOf('*/', endIndex)) !== -1) {
-            commentOpenCount--;
-            endIndex += 2;
-        }
-
-        if (commentOpenCount < 0) {
-            return false;
-        }
-    }
-
-    return commentOpenCount > 0; // true if unclosed
-}
-
 function addReport(index: number, type: string, input?: string | object) {
+    if (!debug) {
+        return;
+    }
+
     var generated = {
         "index": index,
         "type": type,
@@ -564,7 +448,6 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
     }
 
     var diagnosticsS: Array<vscode.Diagnostic> = [];
-
     diagnosticsList.forEach((item: any, index: number) => {
         var modeS = 9;
         var diagnostic: vscode.Diagnostic = item.diagnostic;
@@ -635,35 +518,6 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
     }
 
     printReport(document.uri.fsPath, report);
-}
-
-function removeCommentsOutsideStrings(line: string): string {
-    let inString = false;
-    let inTemplate = false;
-    let result = "";
-    let i = 0;
-
-    while (i < line.length) {
-        const char = line[i];
-        const nextChar = line[i + 1];
-
-        if (char === '"' && !inTemplate) {
-            inString = !inString;
-        } else if (char === "'" && !inTemplate) {
-            inString = !inString;
-        } else if (char === '`' && !inString) {
-            inTemplate = !inTemplate;
-        }
-
-        if (char === '/' && (nextChar === '/' || nextChar === '*') && !inString && !inTemplate) {
-            return result;
-        }
-
-        result += char;
-        i++;
-    }
-
-    return result;
 }
 
 class SemicolonCodeActionProvider implements vscode.CodeActionProvider {
@@ -779,5 +633,5 @@ function getLeadingSpaces(lineText: string): number {
 }
 
 export function deactivate() {
-    print("deactivating...");
+    action('extension.deactive');
 }

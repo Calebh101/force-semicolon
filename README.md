@@ -115,11 +115,17 @@ This will ignore all semicolon errors in the entire file.
 ## 0.3.1 - 2/5/25
 
 - Bug fix affecting callbacks
-- Documentation fixes
+- Improved documentation
 
 ## 0.3.2 - 2/5/25
 
 - Bug fix affecting callbacks
+
+## 0.3.3 - 2/5/25
+
+- Bug fix affecting callbacks (third in a row, that is impressive)
+- Improved documentation
+- Optimized extension
 
 # Is this perfect?
 
