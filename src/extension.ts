@@ -1,18 +1,129 @@
 import * as vscode from 'vscode';
+import { parse } from "@babel/parser";
+import traverse from "@babel/traverse";
 
+var mode: number = 2;
 var debug: boolean = true;
 var allowFileAction: boolean = false;
-const useRegex: boolean = false;
+var useRegex: boolean = false;
 
 var defaultSeverity = 'error';
-var message: string = "No semicolon found.";
+var message: string = "Missing or invalid semicolon.";
 
-const regex: RegExp = /^(?!\..*)(?!.*[\{\}\(\):,/*]).*[^;]$/;
-var config = vscode.workspace.getConfiguration('force-semicolon');
+var regex: RegExp = /^(?!\..*)(?!.*[\{\}\(\):,/*]).*[^;]$/;
+var defaultReport = {"0": [], "-1": []};
+var report: { [key: string]: any } = defaultReport;
 
-function print(input: any) {
+function print(input: any, attachment?: any) {
     if (debug) {
-        console.log("force-semicolon: " + input);
+        console.log("force-semicolon: " + input, attachment);
+    }
+}
+
+function error(input: any, attachment?: any) {
+    console.error("force-semicolon: " + input, attachment);
+}
+
+function handle(index: number, text: string, document: vscode.TextDocument): object {
+    if (mode == 1) {
+        text = removeCommentsOutsideStrings(text).trim();
+        var valid = validText(text, document, index);
+        var parentheses = handleParentheses(document, index);
+        var comments = handleUnclosedComments(document, index);
+        var output: boolean = valid && parentheses && !comments;
+        return { 
+            result: output, 
+            validText: valid, 
+            parenthesis: parentheses,
+            comments: comments 
+        };
+    } else if (mode == 2) {
+        var diagnosticsList: Array<any> = [];
+        var statements: Array<any> = [];
+        var plugins: Array<any> = ['jsx'];
+
+        if (document.languageId === 'typescript') {
+            plugins.push('typescript');
+        }
+
+        const ast = parse(document.getText(), {
+            sourceType: "module",
+            ranges: true,
+            plugins: plugins,
+        });
+        
+        traverse(ast, {
+            enter(path: any) {
+                var isExpressionStatement = path.isExpressionStatement();
+                var isVariableDeclaration = path.isVariableDeclaration();
+                var isReturnStatement = path.isReturnStatement();
+
+                var isInLoopHead = Boolean(
+                    path.findParent((parent: any) =>
+                        isVariableDeclaration && (parent.isForStatement() || parent.isForOfStatement() || parent.isForInStatement()) && path.key === "left"
+                    )
+                );
+
+                if (path.node.loc && (isExpressionStatement || isVariableDeclaration || isReturnStatement) && !(isVariableDeclaration && isInLoopHead)) {
+                    const { line, column } = path.node.loc.end;
+                    var lineM = line - 1;
+                    var lineP = line - 1;
+                    var columnM = column - 1;
+                    var columnP = column + 1;
+
+                    if (lineM <= 0) {
+                        lineM = 0;
+                    }
+
+                    if (columnM <= 0) {
+                        columnM = 0;
+                    }
+
+                    const start = new vscode.Position(lineM, columnP);
+                    const end = new vscode.Position(lineM, columnM);
+            
+                    statements.push({
+                        type: path.node.type,
+                        start: start,
+                        end: end,
+                        isExpressionStatement,
+                        isVariableDeclaration,
+                        isReturnStatement,
+                        isInLoopHead,
+                    });
+                }
+            },
+        });
+
+        for (let i = 0; i < statements.length; i++) {
+            const statement = statements[i];
+            const start = statement.start;
+            const end = statement.end;
+            const range = new vscode.Range(start, end);
+            const text = document.getText(range);
+
+            if (text.includes(';')) {
+                continue;
+            }
+
+            const diagnostic = new vscode.Diagnostic(
+                range,
+                message,
+            );
+
+            diagnosticsList.push(diagnostic);
+            addReport(i, 'statements.statement.diagnostic.add', {'text': text, 'range': range});
+
+            if (i >= 100) {
+                break;
+            }
+        }
+
+        return {
+            diagnostics: diagnosticsList,
+        };
+    } else {
+        throw new Error("handle: invalid mode: " + mode);
     }
 }
 
@@ -55,7 +166,7 @@ function getSeverity(input: string): vscode.DiagnosticSeverity {
         case 'error': return vscode.DiagnosticSeverity.Error;
 
         default:
-            print("error: unknown severity: " + input);
+            error("unknown severity: " + input);
             return getSeverity(defaultSeverity);
     }
 }
@@ -154,23 +265,40 @@ function handleParentheses(document: vscode.TextDocument, lineIndex: number): bo
             return handleParentheses(document, lineIndex);
     }
 
+    let inString = false;
+    let stringDelimiter = '';
+    
     for (let i = 0; i <= lineIndex; i++) {
         const lineText = document.lineAt(i).text;
         encounter = 0;
-        
-        for (let char of lineText) {
-            if (char === open) {
-                openParenthesesCount++;
-            } else if (char === close) {
-                openParenthesesCount--;
+
+        for (let charIndex = 0; charIndex < lineText.length; charIndex++) {
+            const char = lineText[charIndex];
+
+            if ((char === '"' || char === "'") && (charIndex === 0 || lineText[charIndex - 1] !== '\\')) {
+                if (!inString) {
+                    inString = true;
+                    stringDelimiter = char;
+                } else if (char === stringDelimiter) {
+                    inString = false;
+                }
+                continue;
             }
 
-            if (type === "rounded" && char === '{') {
-                encounter++;
-            }
+            if (!inString) {
+                if (char === open) {
+                    openParenthesesCount++;
+                } else if (char === close) {
+                    openParenthesesCount--;
+                }
 
-            if (type === "rounded" && char === '}') {
-                encounter--;
+                if (type === "rounded" && char === '{') {
+                    encounter++;
+                }
+
+                if (type === "rounded" && char === '}') {
+                    encounter--;
+                }
             }
 
             if (openParenthesesCount < 0) {
@@ -181,7 +309,6 @@ function handleParentheses(document: vscode.TextDocument, lineIndex: number): bo
 
     let condition: boolean = openParenthesesCount === 0;
     let encountered: boolean = encounter > 0;
-    print("parentheses balanced (type: " + type + ") (line: " + lineIndex + "): " + condition + " (encounter: " + encounter + ":" + encountered + ")");
 
     if (encounter) {
         return true;
@@ -190,71 +317,119 @@ function handleParentheses(document: vscode.TextDocument, lineIndex: number): bo
     }
 }
 
+function handleUnclosedComments(document: vscode.TextDocument, lineIndex: number): boolean {
+    let commentOpenCount = 0;
+
+    for (let i = 0; i <= lineIndex; i++) {
+        const lineText = document.lineAt(i).text;
+
+        let startIndex = 0;
+        while ((startIndex = lineText.indexOf('/*', startIndex)) !== -1) {
+            commentOpenCount++;
+            startIndex += 2;
+        }
+
+        let endIndex = 0;
+        while ((endIndex = lineText.indexOf('*/', endIndex)) !== -1) {
+            commentOpenCount--;
+            endIndex += 2;
+        }
+
+        if (commentOpenCount < 0) {
+            return false;
+        }
+    }
+
+    return commentOpenCount > 0; // true if unclosed
+}
+
+function addReport(index: number, type: string, input?: string | object) {
+    var generated = {
+        "index": index,
+        "type": type,
+        "value": input,
+    };
+
+    if (index <= -1) {
+        report[`${index}`].push(generated);
+    } else {
+        report[`${index}`] = generated;
+    }
+}
+
 function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.DiagnosticCollection) {
     if (document.languageId !== 'javascript' && document.languageId !== 'typescript') {
         return;
     }
 
+    report = defaultReport;
+    report["i"] = {
+        "document": document.uri.fsPath,
+        "language": document.languageId,
+        "mode": mode,
+    };
+
+    var config = vscode.workspace.getConfiguration('force-semicolon');
     var diagnosticsList: vscode.Diagnostic[] = [];
     var ignoreAll: boolean = false;
     var severity: vscode.DiagnosticSeverity = getSeverity(config.get<string>('lintType', defaultSeverity) ?? defaultSeverity);
 
-    for (let i = 0; i < document.lineCount; i++) {
-        var origLineText: string = document.lineAt(i).text;
-        var lineText: string = origLineText.trim();
+    if (mode === 1) {
+        for (let i = 0; i < document.lineCount; i++) {
+            var origLineText: string = document.lineAt(i).text;
+            var lineText: string = origLineText.trim();
 
-        if (lineText.length > 0) {
-            if (lineText.startsWith('//')) {
-                if (lineText.includes("force-semicolon: ignore-all")) {
-                    print("action: general.all.ignore (line: " + i + ")");
-                    ignoreAll = true;
-                }
-                if (lineText.includes("force-semicolon: ignore")) {
-                    print("action: general.one.ignore (line: " + i + ")");
-                    i++;
-                }
-                if (lineText.includes("force-semicolon lint-type: error")) {
-                    print("action: lint-type.set.error (line: " + i + ")");
-                    severity = getSeverity("error");
-                }
-                if (lineText.includes("force-semicolon lint-type: warning")) {
-                    print("action: lint-type.set.warn (line: " + i + ")");
-                    severity = getSeverity("warn");
-                }
-                if (lineText.includes("force-semicolon lint-type: info")) {
-                    print("action: lint-type.set.info (line: " + i + ")");
-                    severity = getSeverity("info");
-                }
-            } else {
-                lineText = removeCommentsOutsideStrings(lineText).trim();
-                if (validText(lineText, document, i) && handleParentheses(document, i)) {
-                    const lineLength = origLineText.length;
-                    const lastCharPosition = new vscode.Position(i, lineLength - 1);
-                    const range = new vscode.Range(lastCharPosition, lastCharPosition);
+            if (lineText.length > 0) {
+                if (lineText.startsWith('//')) {
+                    if (lineText.includes("force-semicolon: ignore-all")) {
+                        ignoreAll = true;
+                        addReport(i, "comment.action", "general.all.ignore");
+                    } else if (lineText.includes("force-semicolon: ignore")) {
+                        i++;
+                        addReport(i, "comment.action", "general.one.ignore");
+                    } else {
+                        addReport(i, "comment.generic");
+                    }
+                } else {
+                    const result: Record<string, any> = handle(i, lineText, document);
+                    addReport(i, (result.result ? "line.scan.success" : (("error" in result) ? "line.scan.error" : "line.scan.fail")), result);
+                    if (result.result) {
+                        const lineLength = origLineText.length;
+                        const lastCharPosition = new vscode.Position(i, lineLength - 1);
+                        const range = new vscode.Range(lastCharPosition, lastCharPosition);
 
-                    const diagnostic = new vscode.Diagnostic(
-                        range,
-                        message,
-                    );
-
-                    print("found: issue at line " + i);
-                    diagnosticsList.push(diagnostic);
+                        const diagnostic = new vscode.Diagnostic(
+                            range,
+                            message,
+                        );
+                        diagnosticsList.push(diagnostic);
+                    } else {
+                        if ("error" in result) {
+                            error(result.error);
+                            return;
+                        }
+                    }
                 }
             }
         }
+    } else if (mode === 2) {
+        const result: Record<string, any> = handle(-1, "", document);
+        diagnosticsList = result.diagnostics;
     }
 
     diagnosticsList.forEach((item: vscode.Diagnostic, index: number) => {
         item.severity = severity;
-    });    
+    });
 
     if (ignoreAll) {
-        print("ignoring diagnostics...");
+        addReport(-1, 'diagnostics.set', 'ignore');
         diagnostics.set(document.uri, []);
     } else {
-        print("setting diagnostics...");
+        addReport(-1, 'diagnostics.set', 'set');
         diagnostics.set(document.uri, diagnosticsList);
     }
+
+    print("report generated:", report);
 }
 
 function removeCommentsOutsideStrings(line: string): string {
@@ -275,7 +450,7 @@ function removeCommentsOutsideStrings(line: string): string {
             inTemplate = !inTemplate;
         }
 
-        if (char === '/' && nextChar === '/' && !inString && !inTemplate) {
+        if (char === '/' && (nextChar === '/' || nextChar === '*') && !inString && !inTemplate) {
             return result;
         }
 
@@ -291,7 +466,7 @@ class SemicolonCodeActionProvider implements vscode.CodeActionProvider {
         document: vscode.TextDocument,
         range: vscode.Range,
         context: vscode.CodeActionContext,
-        token: vscode.CancellationToken
+        token: vscode.CancellationToken,
     ): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
         const diagnostics = context.diagnostics.filter(d => d.message === message);
         var fixes: Array<any> = [];
@@ -324,7 +499,7 @@ class SemicolonCodeActionProvider implements vscode.CodeActionProvider {
         }
 
         // addFix
-        const lastNonWhitespacePos = new vscode.Position(range.start.line, trimmedText.length);
+        const lastNonWhitespacePos = new vscode.Position(range.end.line, trimmedText.length);
         addFix.edit = new vscode.WorkspaceEdit();
         addFix.edit.insert(document.uri, lastNonWhitespacePos, ';');
         fixes.push(addFix);

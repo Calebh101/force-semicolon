@@ -2,8 +2,6 @@
 
 This extension is a simple extension I made to enforce good coding habits and make you put a semicolon at the end of your JavaScript and TypeScript code lines.
 
-Supports multiline files (doesn't work on single-line files).
-
 This extension is in beta, so be aware that it might not always be perfect. Expect a lot of small releases until this extension exits beta.
 
 # How to Use
@@ -76,9 +74,14 @@ This will ignore all semicolon errors in the entire file.
 - Bug fix affecting chained promises
 - Updated documentation
 
-# Known issues
+## 0.2.3 - 2/2/25
 
-- The extension will detect a false positive for items in JSON-maps/sets that do not end in a comma
+- Bug fix affecting lines ending in `[`
+- Bug fix affecting multiline comments
+
+## 0.3.0 - 2/4/25
+
+- Complete overhaul of verification system, now using statements instead of lines. This improves accuracy and different line-break scenarios.
 
 # Is this perfect?
 

@@ -4,7 +4,7 @@
   "description": "Force semicolons at the end of lines in JavaScript and TypeScript. Does not require ESLint.",
   "repository": "https://github.com/Calebh101/force-semicolon",
   "publisher": "Calebh101",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "icon": "images/iconsmall.png",
   "engines": {
     "vscode": "^1.96.0"
@@ -20,9 +20,9 @@
   "contributes": {
     "commands": [
       {
-          "command": "force-semicolon.analyzeAll",
-          "title": "Analyze All Files",
-          "category": "Force Semicolon"
+        "command": "force-semicolon.analyzeAll",
+        "title": "Analyze All Files",
+        "category": "Force Semicolon"
       }
     ],
     "configuration": {
@@ -62,6 +62,9 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/babel__traverse": "^7.20.6",
+    "@types/estraverse": "^5.1.7",
+    "@types/estree": "^1.0.6",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@types/vscode": "^1.96.0",
@@ -73,5 +76,10 @@
     "eslint": "^9.16.0",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.26.7",
+    "@babel/traverse": "^7.26.7",
+    "@babel/types": "^7.26.7"
   }
 }
