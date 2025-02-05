@@ -64,6 +64,23 @@
           "default": "Warning",
           "description": "The type of lint triggered when a semicolon is unnecessary."
         },
+        "force-semicolon.extraSemicolonLintType": {
+          "type": "string",
+          "enum": [
+            "Info",
+            "Warning",
+            "Error",
+            "Off"
+          ],
+          "enumDescriptions": [
+            "Show an info dialogue when an extra semicolon is present.",
+            "Show warnings when an extra semicolon is present.",
+            "Show errors when an extra semicolon is present.",
+            "Doesn't show anything when an extra semicolon is present."
+          ],
+          "default": "Warning",
+          "description": "The type of lint triggered when an extra semicolon is present."
+        },
         "force-semicolon.debug": {
           "type": "boolean",
           "default": false,

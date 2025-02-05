@@ -11,6 +11,7 @@ var useRegex: boolean = false;
 var defaultSeverity = 'error';
 var noSemicolonMessage: string = "Missing or invalid semicolon.";
 var unnecessarySemicolonMessage: string = 'Unnecessary semicolon.';
+var extraSemicolonMessage: string = 'Extra semicolon.';
 
 var regex: RegExp = /^(?!\..*)(?!.*[\{\}\(\):,/*]).*[^;]$/;
 var defaultReport = {"0": [], "-1": []};
@@ -144,6 +145,8 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     var isExportDeclaration = path.isExportDeclaration();
                     var isClassDeclaration = path.isClassDeclaration();
                     var isClassMethod = path.isClassMethod();
+                    var isExportNamedDeclaration = path.isExportNamedDeclaration();
+                    var isExportDefaultDeclaration = path.isExportDefaultDeclaration();
 
                     var isInLoopHead = Boolean(path.findParent((parent: any) => isVariableDeclaration && (parent.isForStatement() || parent.isForOfStatement() || parent.isForInStatement()) && path.key === "left"));
                     var isInObjectProperty = Boolean(path.findParent((parent: any) => parent.isObjectProperty()));
@@ -165,7 +168,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     const start = new vscode.Position(lineM, columnP);
                     const end = new vscode.Position(lineM, columnM);
 
-                    if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression) {
+                    if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isExportNamedDeclaration && !isExportDefaultDeclaration) {
                         modeS = 1;
                     } else if ((isIfStatement || isWhileStatement || isForStatement || isSwitchStatement || isDoWhileStatement || isFunctionDeclaration || isTryStatement || isClassDeclaration || isClassMethod) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression) {
                         modeS = 2;
@@ -194,6 +197,8 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                         isThrowStatement,
                         isImportDeclaration,
                         isExportDeclaration,
+                        isExportDefaultDeclaration,
+                        isExportNamedDeclaration,
                         isClassDeclaration,
                         isClassMethod,
                     });
@@ -209,17 +214,27 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
             const text = document.getText(range);
 
             if (statement.mode === 1) {
-                if (text.includes(';')) {
-                    continue;
+                if (text.includes(';;')) {
+                    const diagnostic = new vscode.Diagnostic(
+                        range,
+                        extraSemicolonMessage,
+                    );
+
+                    diagnosticsList.push({diagnostic: diagnostic, mode: 3});
+                    addReport(i, 'statements.statement.diagnostic.add.1.1', {'text': text, 'range': range, 'mode': 1});
+                } else {
+                    if (text.includes(';')) {
+                        continue;
+                    }
+
+                    const diagnostic = new vscode.Diagnostic(
+                        range,
+                        noSemicolonMessage,
+                    );
+
+                    diagnosticsList.push({diagnostic: diagnostic, mode: 1});
+                    addReport(i, 'statements.statement.diagnostic.add.1.0', {'text': text, 'range': range, 'mode': 1});
                 }
-
-                const diagnostic = new vscode.Diagnostic(
-                    range,
-                    noSemicolonMessage,
-                );
-
-                diagnosticsList.push({diagnostic: diagnostic, mode: statement.mode});
-                addReport(i, 'statements.statement.diagnostic.add', {'text': text, 'range': range, 'mode': 1});
             } else if (statement.mode === 2) {
                 if (!text.includes(';')) {
                     continue;
@@ -230,8 +245,8 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     unnecessarySemicolonMessage,
                 );
 
-                diagnosticsList.push({diagnostic: diagnostic, mode: statement.mode});
-                addReport(i, 'statements.statement.diagnostic.add', {'text': text, 'range': range, 'mode': 2});
+                diagnosticsList.push({diagnostic: diagnostic, mode: 2});
+                addReport(i, 'statements.statement.diagnostic.add.2.0', {'text': text, 'range': range, 'mode': 2});
             }
         }
 
@@ -494,6 +509,7 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
     var ignoreAll: boolean = false;
     var missingSeverity: string = config.get<string>('missingSemicolonLintType', defaultSeverity) ?? defaultSeverity;
     var unnecessarySeverity: string = config.get<string>('unnecessarySemicolonLintType', defaultSeverity) ?? defaultSeverity;
+    var extraSeverity: string = config.get<string>('extraSemicolonLintType', defaultSeverity) ?? defaultSeverity;
 
     if ((config.get<boolean>('debug', debug) ?? debug) === true) {
         debug = true;
@@ -548,6 +564,7 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
         var modeS = 9;
         var diagnostic: vscode.Diagnostic = item.diagnostic;
         var off = 'Off';
+        var code = 'unknown';
 
         if (mode === 1) {
             modeS = 1;
@@ -556,6 +573,8 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
                 modeS = 1;
             } else if (item.mode === 2) {
                 modeS = 2;
+            } else if (item.mode === 3) {
+                modeS = 3;
             } else {
                 error("unknown diagnostic.mode: " + item.mode);
                 modeS = 0;
@@ -573,15 +592,22 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
                 if (missingSeverity === off) {
                     modeS = -1;
                 }
-
                 diagnostic.severity = getSeverity(missingSeverity)!;
+                code = 'missing-semicolon';
                 break;
             case 2:
                 if (unnecessarySeverity === off) {
                     modeS = -1;
                 }
-
                 diagnostic.severity = getSeverity(unnecessarySeverity)!;
+                code = 'unnecessary-semicolon';
+                break;
+            case 3:
+                if (extraSeverity === off) {
+                    modeS = -1;
+                }
+                diagnostic.severity = getSeverity(extraSeverity)!;
+                code = 'extra-semicolon';
                 break;
             default:
                 error("unknown modeS: " + modeS);
@@ -589,6 +615,8 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
         }
 
         if (modeS >= 0) {
+            diagnostic.code = code;
+            diagnostic.source = "Calebh101.force-semicolon.diagnostic"; 
             diagnosticsS.push(diagnostic);
         }
     });
@@ -640,11 +668,70 @@ class SemicolonCodeActionProvider implements vscode.CodeActionProvider {
         context: vscode.CodeActionContext,
         token: vscode.CancellationToken,
     ): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
-        const diagnostics = context.diagnostics.filter(d => d.message === noSemicolonMessage);
+        const diagnostics = context.diagnostics.filter(d => d.source === 'Calebh101.force-semicolon.diagnostic');
         var fixes: Array<any> = [];
         if (diagnostics.length === 0) {
             return [];
         }
+
+        diagnostics.forEach(diagnostic => {
+            switch (diagnostic.code) {
+                case "missing-semicolon":
+                    // addFix
+                    const addFix = new vscode.CodeAction(
+                        'Add semicolon',
+                        vscode.CodeActionKind.QuickFix,
+                    );
+        
+                    const position = new vscode.Position(diagnostic.range.end.line, diagnostic.range.start.character + 1);
+                    addFix.edit = new vscode.WorkspaceEdit();
+                    addFix.edit.insert(document.uri, position, ';');
+                    addFix.diagnostics = [diagnostic];
+                    fixes.push(addFix);
+                    break;
+
+                case "unnecessary-semicolon":
+                    // removeFix
+                    const removeFixU = new vscode.CodeAction(
+                        'Remove unnecessary semicolon',
+                        vscode.CodeActionKind.QuickFix,
+                    );
+        
+                    const positionA = new vscode.Position(diagnostic.range.end.line, diagnostic.range.start.character + 1);
+                    const range = new vscode.Range(
+                        positionA,
+                        new vscode.Position(diagnostic.range.end.line, diagnostic.range.start.character + 2),
+                    );
+
+                    removeFixU.edit = new vscode.WorkspaceEdit();
+                    removeFixU.edit.delete(document.uri, range);
+                    removeFixU.diagnostics = [diagnostic];
+                    fixes.push(removeFixU);
+                    break;
+
+                case "extra-semicolon":
+                    // removeFix
+                    const removeFixE = new vscode.CodeAction(
+                        'Remove extra semicolon',
+                        vscode.CodeActionKind.QuickFix,
+                    );
+        
+                    const positionB = new vscode.Position(diagnostic.range.end.line, diagnostic.range.start.character + 1);
+                    const rangeE = new vscode.Range(
+                        positionB,
+                        new vscode.Position(diagnostic.range.end.line, diagnostic.range.start.character + 2),
+                    );
+
+                    removeFixE.edit = new vscode.WorkspaceEdit();
+                    removeFixE.edit.delete(document.uri, rangeE);
+                    removeFixE.diagnostics = [diagnostic];
+                    fixes.push(removeFixE);
+                    break;
+                
+                default:
+                    break;
+            }
+        });
 
         // initialize fixes
         const ignoreFix = new vscode.CodeAction(
@@ -664,20 +751,6 @@ class SemicolonCodeActionProvider implements vscode.CodeActionProvider {
         if (trimmedText.length <= 0) {
             return [];
         }
-
-        // addFix
-        diagnostics.forEach(diagnostic => {
-            const addFix = new vscode.CodeAction(
-                'Add semicolon',
-                vscode.CodeActionKind.QuickFix,
-            );
-
-            const position = new vscode.Position(diagnostic.range.end.line, diagnostic.range.start.character + 1);
-            addFix.edit = new vscode.WorkspaceEdit();
-            addFix.edit.insert(document.uri, position, ';');
-            addFix.diagnostics = [diagnostic];
-            fixes.push(addFix);
-        });
 
         // ignoreFix
         const pos = new vscode.Position(range.start.line, 0);

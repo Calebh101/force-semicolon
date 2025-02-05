@@ -8,14 +8,14 @@ This extension is in beta, so be aware that it might not always be perfect. Expe
 
 ## Comments
 
-To ignore a line: Simply insert this comment above the line, like so:
+To ignore a statement: Simply insert this comment above the line, like so:
 
 ```javascript
 // force-semicolon: ignore
 function("function without a semicolon")
 ```
 
-This will ignore the line directly below the comment.
+This will ignore the statement directly below the comment.
 
 To ignore a file: Simply insert this comment anywhere in the file, like so:
 
@@ -28,11 +28,28 @@ This will ignore all semicolon errors in the entire file.
 
 ## Settings
 
-- force-semicolon.lintType: setting that decides if VS Code should give an error, warning, or info dialogue
+- force-semicolon.missingSemicolonLintType: setting that decides if VS Code should give an error, warning, or info dialogue for missing semicolons
     - Options:
         - Error: red line and notification
         - Warning: yellow line and notification
         - Info: blue line
+        - Off: no line
+    - Default: Error
+
+- force-semicolon.unnecessarySemicolonLintType: setting that decides if VS Code should give an error, warning, or info dialogue for unnecessary semicolons (semicolons after function declarations, if statements, etc.)
+    - Options:
+        - Error: red line and notification
+        - Warning: yellow line and notification
+        - Info: blue line
+        - Off: no line
+    - Default: Error
+
+- force-semicolon.extraSemicolonLintType: setting that decides if VS Code should give an error, warning, or info dialogue for extra semicolons after statements
+    - Options:
+        - Error: red line and notification
+        - Warning: yellow line and notification
+        - Info: blue line
+        - Off: no line
     - Default: Error
 
 ## Commands
@@ -83,8 +100,9 @@ This will ignore all semicolon errors in the entire file.
 
 - Complete overhaul of verification system.
     - We switched over from line-based and text-based scanning to AST-based scanning. This not only improves accuracy, it allows the extension to scan single-line files and accurately find incorrect/missing semicolons.
-- New feature: Unnecessary Semicolon: detects if you put a semicolon after an if statement, function declaration, etc (like a psychopath)
-- You can also now turn off Missing Semicolon and Unnecessasy Semicolon in settings
+- New feature: Unnecessary Semicolon: detects and warns you if you put a semicolon after an if statement, function declaration, etc (like a psychopath)
+- New feature: Extra Semicolon: detects and warns you if you put an extra semicolon at the end of a statement
+- You can also now turn off Missing Semicolon, Unnecessasy Semicolon, and Extra Semicolon in VS Code settings
 
 # Is this perfect?
 
