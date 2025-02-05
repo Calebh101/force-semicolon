@@ -8,7 +8,8 @@ var allowFileAction: boolean = false;
 var useRegex: boolean = false;
 
 var defaultSeverity = 'error';
-var message: string = "Missing or invalid semicolon.";
+var noSemicolonMessage: string = "Missing or invalid semicolon.";
+var unnecessarySemicolonMessage: string = 'Unnecessary semicolon.';
 
 var regex: RegExp = /^(?!\..*)(?!.*[\{\}\(\):,/*]).*[^;]$/;
 var defaultReport = {"0": [], "-1": []};
@@ -57,6 +58,15 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                 var isExpressionStatement = path.isExpressionStatement();
                 var isVariableDeclaration = path.isVariableDeclaration();
                 var isReturnStatement = path.isReturnStatement();
+                var isIfStatement = path.isIfStatement();
+                var isForStatement = path.isForStatement();
+                var isWhileStatement = path.isWhileStatement();
+                var isDoWhileStatement = path.isDoWhileStatement();
+                var isSwitchStatement = path.isSwitchStatement();
+                var isFunctionDeclaration = path.isFunctionDeclaration();
+                var isFunctionExpression = path.isFunctionExpression();
+                var isArrowFunctionExpression = path.isArrowFunctionExpression();
+                var isTryStatement = path.isTryStatement();
 
                 var isInLoopHead = Boolean(
                     path.findParent((parent: any) =>
@@ -64,34 +74,44 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     )
                 );
 
-                if (path.node.loc && (isExpressionStatement || isVariableDeclaration || isReturnStatement) && !(isVariableDeclaration && isInLoopHead)) {
-                    const { line, column } = path.node.loc.end;
-                    var lineM = line - 1;
-                    var lineP = line - 1;
-                    var columnM = column - 1;
-                    var columnP = column + 1;
+                const { line, column } = path.node.loc.end;
+                var lineM = line - 1;
+                var lineP = line - 1;
+                var columnM = column - 1;
+                var columnP = column + 1;
 
-                    if (lineM <= 0) {
-                        lineM = 0;
-                    }
-
-                    if (columnM <= 0) {
-                        columnM = 0;
-                    }
-
-                    const start = new vscode.Position(lineM, columnP);
-                    const end = new vscode.Position(lineM, columnM);
-            
-                    statements.push({
-                        type: path.node.type,
-                        start: start,
-                        end: end,
-                        isExpressionStatement,
-                        isVariableDeclaration,
-                        isReturnStatement,
-                        isInLoopHead,
-                    });
+                if (lineM <= 0) {
+                    lineM = 0;
                 }
+
+                if (columnM <= 0) {
+                    columnM = 0;
+                }
+
+                const start = new vscode.Position(lineM, columnP);
+                const end = new vscode.Position(lineM, columnM);
+
+                const valid = path.node.loc && (isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isArrowFunctionExpression || isDoWhileStatement) && !(isVariableDeclaration && isInLoopHead);
+
+                statements.push({
+                    mode: valid ? 1 : (path.node.loc && (isIfStatement || isWhileStatement || isForStatement || isSwitchStatement || isDoWhileStatement || isFunctionDeclaration || isTryStatement) && !(isVariableDeclaration && isInLoopHead)),
+                    type: path.node.type,
+                    start: start,
+                    end: end,
+                    isExpressionStatement,
+                    isVariableDeclaration,
+                    isReturnStatement,
+                    isIfStatement,
+                    isForStatement,
+                    isWhileStatement,
+                    isDoWhileStatement,
+                    isSwitchStatement,
+                    isFunctionDeclaration,
+                    isFunctionExpression,
+                    isArrowFunctionExpression,
+                    isTryStatement,
+                    isInLoopHead,
+                });
             },
         });
 
@@ -102,20 +122,38 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
             const range = new vscode.Range(start, end);
             const text = document.getText(range);
 
-            if (text.includes(';')) {
-                continue;
-            }
+            if (statement.mode === 1) {
+                if (text.includes(';')) {
+                    continue;
+                }
 
-            const diagnostic = new vscode.Diagnostic(
-                range,
-                message,
-            );
+                const diagnostic = new vscode.Diagnostic(
+                    range,
+                    noSemicolonMessage,
+                );
 
-            diagnosticsList.push(diagnostic);
-            addReport(i, 'statements.statement.diagnostic.add', {'text': text, 'range': range});
+                diagnosticsList.push(diagnostic);
+                addReport(i, 'statements.statement.diagnostic.add', {'text': text, 'range': range});
 
-            if (i >= 100) {
-                break;
+                if (i >= 100) {
+                    break;
+                }
+            } else {
+                if (!text.includes(';')) {
+                    continue;
+                }
+
+                const diagnostic = new vscode.Diagnostic(
+                    range,
+                    unnecessarySemicolonMessage,
+                );
+
+                diagnosticsList.push(diagnostic);
+                addReport(i, 'statements.statement.diagnostic.add', {'text': text, 'range': range});
+
+                if (i >= 100) {
+                    break;
+                }
             }
         }
 
@@ -400,7 +438,7 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
 
                         const diagnostic = new vscode.Diagnostic(
                             range,
-                            message,
+                            noSemicolonMessage,
                         );
                         diagnosticsList.push(diagnostic);
                     } else {
@@ -468,18 +506,13 @@ class SemicolonCodeActionProvider implements vscode.CodeActionProvider {
         context: vscode.CodeActionContext,
         token: vscode.CancellationToken,
     ): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
-        const diagnostics = context.diagnostics.filter(d => d.message === message);
+        const diagnostics = context.diagnostics.filter(d => d.message === noSemicolonMessage);
         var fixes: Array<any> = [];
         if (diagnostics.length === 0) {
             return [];
         }
 
         // initialize fixes
-        const addFix = new vscode.CodeAction(
-            'Add semicolon',
-            vscode.CodeActionKind.QuickFix,
-        );
-
         const ignoreFix = new vscode.CodeAction(
             'Ignore this line',
             vscode.CodeActionKind.QuickFix,
@@ -499,10 +532,18 @@ class SemicolonCodeActionProvider implements vscode.CodeActionProvider {
         }
 
         // addFix
-        const lastNonWhitespacePos = new vscode.Position(range.end.line, trimmedText.length);
-        addFix.edit = new vscode.WorkspaceEdit();
-        addFix.edit.insert(document.uri, lastNonWhitespacePos, ';');
-        fixes.push(addFix);
+        diagnostics.forEach(diagnostic => {
+            const addFix = new vscode.CodeAction(
+                'Add semicolon',
+                vscode.CodeActionKind.QuickFix,
+            );
+
+            const position = new vscode.Position(diagnostic.range.end.line, diagnostic.range.start.character + 1);
+            addFix.edit = new vscode.WorkspaceEdit();
+            addFix.edit.insert(document.uri, position, ';');
+            addFix.diagnostics = [diagnostic];
+            fixes.push(addFix);
+        });
 
         // ignoreFix
         const pos = new vscode.Position(range.start.line, 0);
