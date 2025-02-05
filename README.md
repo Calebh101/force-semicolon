@@ -81,7 +81,10 @@ This will ignore all semicolon errors in the entire file.
 
 ## 0.3.0 - 2/4/25
 
-- Complete overhaul of verification system, now using statements instead of lines. This improves accuracy and different line-break scenarios.
+- Complete overhaul of verification system.
+    - We switched over from line-based and text-based scanning to AST-based scanning. This not only improves accuracy, it allows the extension to scan single-line files and accurately find incorrect/missing semicolons.
+- New feature: Unnecessary Semicolon: detects if you put a semicolon after an if statement, function declaration, etc (like a psychopath)
+- You can also now turn off Missing Semicolon and Unnecessasy Semicolon in settings
 
 # Is this perfect?
 

@@ -3,7 +3,8 @@ import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
 
 var mode: number = 2;
-var debug: boolean = true;
+var debug: boolean = false;
+var html: boolean = false;
 var allowFileAction: boolean = false;
 var useRegex: boolean = false;
 
@@ -17,12 +18,62 @@ var report: { [key: string]: any } = defaultReport;
 
 function print(input: any, attachment?: any) {
     if (debug) {
-        console.log("force-semicolon: " + input, attachment);
+        console.log("force-semicolon: " + input, attachment ?? 0);
     }
 }
 
+function warn(input: any, attachment?: any) {
+    if (debug) {
+        console.warn("force-semicolon: " + input, attachment ?? -1);
+    }
+}
+
+function printReport(file: string, report: any) {
+    print("force-semicolon: report is ready (file: " + file + ")", report);
+}
+
 function error(input: any, attachment?: any) {
-    console.error("force-semicolon: " + input, attachment);
+    console.error("force-semicolon: " + input, attachment ?? -1);
+}
+
+function extractText(document: vscode.TextDocument): string | null {
+    var text = document.getText();
+    if (document.languageId === 'html') {
+        if (!html) {
+            return null;
+        }
+        var htmlS = text;
+        var jsRegex = /<script.*?>([\s\S]*?)<\/script>/g;
+        var matches;
+        text = '// force-semicolon auto generated file\n';
+
+        while ((matches = jsRegex.exec(htmlS)) !== null) {
+            text += matches[1];
+        }
+    }
+    return text;
+}
+
+function parseAst(document: vscode.TextDocument): any {
+    try {
+        const text = extractText(document);
+        if (!text) {
+            print("text was null: " + text);
+            return null;
+        }
+        const ast = parse(text, {
+            sourceType: "module",
+            ranges: true,
+            plugins: ["jsx", "typescript"],
+            errorRecovery: true,
+            allowReturnOutsideFunction: true,
+        });
+
+        return ast;
+    } catch (e) {
+        warn("error with parsing: " + e);
+        return null;
+    }
 }
 
 function handle(index: number, text: string, document: vscode.TextDocument): object {
@@ -41,77 +92,112 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
     } else if (mode == 2) {
         var diagnosticsList: Array<any> = [];
         var statements: Array<any> = [];
-        var plugins: Array<any> = ['jsx'];
+        var ast = parseAst(document);
 
-        if (document.languageId === 'typescript') {
-            plugins.push('typescript');
+        if (!ast) {
+            return {diagnostics: []};
         }
 
-        const ast = parse(document.getText(), {
-            sourceType: "module",
-            ranges: true,
-            plugins: plugins,
-        });
+        const comments = (ast.comments.map((comment: any) => comment.value)).join(' ');
+
+        if (comments.includes('force-semicolon: ignore-all')) {
+            addReport(-1, 'comment.action.ignore-all');
+            return {
+                diagnostics: [],
+                comments: comments,
+            };
+        }
         
         traverse(ast, {
             enter(path: any) {
-                var isExpressionStatement = path.isExpressionStatement();
-                var isVariableDeclaration = path.isVariableDeclaration();
-                var isReturnStatement = path.isReturnStatement();
-                var isIfStatement = path.isIfStatement();
-                var isForStatement = path.isForStatement();
-                var isWhileStatement = path.isWhileStatement();
-                var isDoWhileStatement = path.isDoWhileStatement();
-                var isSwitchStatement = path.isSwitchStatement();
-                var isFunctionDeclaration = path.isFunctionDeclaration();
-                var isFunctionExpression = path.isFunctionExpression();
-                var isArrowFunctionExpression = path.isArrowFunctionExpression();
-                var isTryStatement = path.isTryStatement();
+                var modeS = 0;
+                var node = path.node;
 
-                var isInLoopHead = Boolean(
-                    path.findParent((parent: any) =>
-                        isVariableDeclaration && (parent.isForStatement() || parent.isForOfStatement() || parent.isForInStatement()) && path.key === "left"
-                    )
-                );
-
-                const { line, column } = path.node.loc.end;
-                var lineM = line - 1;
-                var lineP = line - 1;
-                var columnM = column - 1;
-                var columnP = column + 1;
-
-                if (lineM <= 0) {
-                    lineM = 0;
+                if (!node.loc || !node.loc.end) {
+                    error("invalid node location: " + node.loc);
+                    return;
                 }
 
-                if (columnM <= 0) {
-                    columnM = 0;
+                var comments = node.leadingComments ?? [];
+                if (comments.length > 0) {
+                    const comment = comments[comments.length - 1];
+                    if (comment.value.includes('force-semicolon: ignore')) {
+                        modeS = -1;
+                    }
                 }
 
-                const start = new vscode.Position(lineM, columnP);
-                const end = new vscode.Position(lineM, columnM);
+                if (modeS >= 0) {
+                    var isExpressionStatement = path.isExpressionStatement();
+                    var isVariableDeclaration = path.isVariableDeclaration();
+                    var isReturnStatement = path.isReturnStatement();
+                    var isIfStatement = path.isIfStatement();
+                    var isForStatement = path.isForStatement();
+                    var isWhileStatement = path.isWhileStatement();
+                    var isDoWhileStatement = path.isDoWhileStatement();
+                    var isSwitchStatement = path.isSwitchStatement();
+                    var isFunctionDeclaration = path.isFunctionDeclaration();
+                    var isFunctionExpression = path.isFunctionExpression();
+                    var isArrowFunctionExpression = path.isArrowFunctionExpression();
+                    var isTryStatement = path.isTryStatement();
+                    var isThrowStatement = path.isThrowStatement();
+                    var isImportDeclaration = path.isImportDeclaration();
+                    var isExportDeclaration = path.isExportDeclaration();
+                    var isClassDeclaration = path.isClassDeclaration();
+                    var isClassMethod = path.isClassMethod();
 
-                const valid = path.node.loc && (isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isArrowFunctionExpression || isDoWhileStatement) && !(isVariableDeclaration && isInLoopHead);
+                    var isInLoopHead = Boolean(path.findParent((parent: any) => isVariableDeclaration && (parent.isForStatement() || parent.isForOfStatement() || parent.isForInStatement()) && path.key === "left"));
+                    var isInObjectProperty = Boolean(path.findParent((parent: any) => parent.isObjectProperty()));
 
-                statements.push({
-                    mode: valid ? 1 : (path.node.loc && (isIfStatement || isWhileStatement || isForStatement || isSwitchStatement || isDoWhileStatement || isFunctionDeclaration || isTryStatement) && !(isVariableDeclaration && isInLoopHead)),
-                    type: path.node.type,
-                    start: start,
-                    end: end,
-                    isExpressionStatement,
-                    isVariableDeclaration,
-                    isReturnStatement,
-                    isIfStatement,
-                    isForStatement,
-                    isWhileStatement,
-                    isDoWhileStatement,
-                    isSwitchStatement,
-                    isFunctionDeclaration,
-                    isFunctionExpression,
-                    isArrowFunctionExpression,
-                    isTryStatement,
-                    isInLoopHead,
-                });
+                    var { line, column } = node.loc.end;
+                    var lineM = line - 1;
+                    var lineP = line - 1;
+                    var columnM = column - 1;
+                    var columnP = column + 1;
+
+                    if (lineM <= 0) {
+                        lineM = 0;
+                    }
+
+                    if (columnM <= 0) {
+                        columnM = 0;
+                    }
+
+                    const start = new vscode.Position(lineM, columnP);
+                    const end = new vscode.Position(lineM, columnM);
+
+                    if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression) {
+                        modeS = 1;
+                    } else if ((isIfStatement || isWhileStatement || isForStatement || isSwitchStatement || isDoWhileStatement || isFunctionDeclaration || isTryStatement || isClassDeclaration || isClassMethod) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression) {
+                        modeS = 2;
+                    } else {
+                        modeS = 0;
+                    }
+
+                    statements.push({
+                        mode: modeS,
+                        type: node.type,
+                        start: start,
+                        end: end,
+                        isExpressionStatement,
+                        isVariableDeclaration,
+                        isReturnStatement,
+                        isIfStatement,
+                        isForStatement,
+                        isWhileStatement,
+                        isDoWhileStatement,
+                        isSwitchStatement,
+                        isFunctionDeclaration,
+                        isFunctionExpression,
+                        isTryStatement,
+                        isInLoopHead,
+                        isInObjectProperty,
+                        isThrowStatement,
+                        isImportDeclaration,
+                        isExportDeclaration,
+                        isClassDeclaration,
+                        isClassMethod,
+                    });
+                }
             },
         });
 
@@ -132,13 +218,9 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     noSemicolonMessage,
                 );
 
-                diagnosticsList.push(diagnostic);
-                addReport(i, 'statements.statement.diagnostic.add', {'text': text, 'range': range});
-
-                if (i >= 100) {
-                    break;
-                }
-            } else {
+                diagnosticsList.push({diagnostic: diagnostic, mode: statement.mode});
+                addReport(i, 'statements.statement.diagnostic.add', {'text': text, 'range': range, 'mode': 1});
+            } else if (statement.mode === 2) {
                 if (!text.includes(';')) {
                     continue;
                 }
@@ -148,17 +230,14 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     unnecessarySemicolonMessage,
                 );
 
-                diagnosticsList.push(diagnostic);
-                addReport(i, 'statements.statement.diagnostic.add', {'text': text, 'range': range});
-
-                if (i >= 100) {
-                    break;
-                }
+                diagnosticsList.push({diagnostic: diagnostic, mode: statement.mode});
+                addReport(i, 'statements.statement.diagnostic.add', {'text': text, 'range': range, 'mode': 2});
             }
         }
 
         return {
             diagnostics: diagnosticsList,
+            comments: comments,
         };
     } else {
         throw new Error("handle: invalid mode: " + mode);
@@ -189,7 +268,7 @@ function getNextRelevantLine(document: vscode.TextDocument, currentLine: number)
     return '';
 }
 
-function getSeverity(input: string): vscode.DiagnosticSeverity {
+function getSeverity(input: string): vscode.DiagnosticSeverity | null {
     switch (input) {
         case 'Info':
         case 'info': return vscode.DiagnosticSeverity.Information;
@@ -202,6 +281,9 @@ function getSeverity(input: string): vscode.DiagnosticSeverity {
 
         case 'Error':
         case 'error': return vscode.DiagnosticSeverity.Error;
+
+        case 'Off':
+        case 'off': return null;
 
         default:
             error("unknown severity: " + input);
@@ -266,7 +348,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function fileAction(name: string, diagnostics: vscode.DiagnosticCollection) {
-    print("action: " + name + " (fileAction[" + allowFileAction + "])");
+    print("action: " + name + " (fileAction: " + allowFileAction + ")");
     if (allowFileAction) {
         analyzeAll(diagnostics);
     }
@@ -396,7 +478,7 @@ function addReport(index: number, type: string, input?: string | object) {
 }
 
 function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.DiagnosticCollection) {
-    if (document.languageId !== 'javascript' && document.languageId !== 'typescript') {
+    if (document.languageId !== 'javascript' && document.languageId !== 'typescript' && document.languageId !== 'html') {
         return;
     }
 
@@ -410,7 +492,12 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
     var config = vscode.workspace.getConfiguration('force-semicolon');
     var diagnosticsList: vscode.Diagnostic[] = [];
     var ignoreAll: boolean = false;
-    var severity: vscode.DiagnosticSeverity = getSeverity(config.get<string>('lintType', defaultSeverity) ?? defaultSeverity);
+    var missingSeverity: string = config.get<string>('missingSemicolonLintType', defaultSeverity) ?? defaultSeverity;
+    var unnecessarySeverity: string = config.get<string>('unnecessarySemicolonLintType', defaultSeverity) ?? defaultSeverity;
+
+    if ((config.get<boolean>('debug', debug) ?? debug) === true) {
+        debug = true;
+    }
 
     if (mode === 1) {
         for (let i = 0; i < document.lineCount; i++) {
@@ -455,8 +542,55 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
         diagnosticsList = result.diagnostics;
     }
 
-    diagnosticsList.forEach((item: vscode.Diagnostic, index: number) => {
-        item.severity = severity;
+    var diagnosticsS: Array<vscode.Diagnostic> = [];
+
+    diagnosticsList.forEach((item: any, index: number) => {
+        var modeS = 9;
+        var diagnostic: vscode.Diagnostic = item.diagnostic;
+        var off = 'Off';
+
+        if (mode === 1) {
+            modeS = 1;
+        } else if (mode === 2) {
+            if (item.mode === 1) {
+                modeS = 1;
+            } else if (item.mode === 2) {
+                modeS = 2;
+            } else {
+                error("unknown diagnostic.mode: " + item.mode);
+                modeS = 0;
+            }
+        } else {
+            error("unknown mode: " + mode);
+            modeS = 0;
+        }
+
+        switch (modeS) {
+            case 0:
+                diagnostic.severity = getSeverity(defaultSeverity)!;
+                break;
+            case 1:
+                if (missingSeverity === off) {
+                    modeS = -1;
+                }
+
+                diagnostic.severity = getSeverity(missingSeverity)!;
+                break;
+            case 2:
+                if (unnecessarySeverity === off) {
+                    modeS = -1;
+                }
+
+                diagnostic.severity = getSeverity(unnecessarySeverity)!;
+                break;
+            default:
+                error("unknown modeS: " + modeS);
+                modeS = -1;
+        }
+
+        if (modeS >= 0) {
+            diagnosticsS.push(diagnostic);
+        }
     });
 
     if (ignoreAll) {
@@ -464,10 +598,10 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
         diagnostics.set(document.uri, []);
     } else {
         addReport(-1, 'diagnostics.set', 'set');
-        diagnostics.set(document.uri, diagnosticsList);
+        diagnostics.set(document.uri, diagnosticsS);
     }
 
-    print("report generated:", report);
+    printReport(document.uri.fsPath, report);
 }
 
 function removeCommentsOutsideStrings(line: string): string {
