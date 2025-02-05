@@ -9,6 +9,7 @@ var allowFileAction: boolean = false;
 var useRegex: boolean = false;
 
 var defaultSeverity = 'error';
+var diagnosticSource = 'force-semicolon';
 var noSemicolonMessage: string = "Missing or invalid semicolon.";
 var unnecessarySemicolonMessage: string = 'Unnecessary semicolon.';
 var extraSemicolonMessage: string = 'Extra semicolon.';
@@ -147,11 +148,11 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     var isClassMethod = path.isClassMethod();
                     var isExportNamedDeclaration = path.isExportNamedDeclaration();
                     var isExportDefaultDeclaration = path.isExportDefaultDeclaration();
+                    var isCallExpression = path.isCallExpression();
 
                     var isInLoopHead = Boolean(path.findParent((parent: any) => isVariableDeclaration && (parent.isForStatement() || parent.isForOfStatement() || parent.isForInStatement()) && path.key === "left"));
                     var isInObjectProperty = Boolean(path.findParent((parent: any) => parent.isObjectProperty()));
                     var isAsyncFunctionExpression = isFunctionExpression && path.node.async;
-                    var isCallExpression = Boolean(path.findParent((parent: any) => parent.isCallExpression()));
 
                     var { line, column } = node.loc.end;
                     var lineM = line - 1;
@@ -620,7 +621,7 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
 
         if (modeS >= 0) {
             diagnostic.code = code;
-            diagnostic.source = "Calebh101.force-semicolon.diagnostic"; 
+            diagnostic.source = diagnosticSource; 
             diagnosticsS.push(diagnostic);
         }
     });
@@ -672,7 +673,7 @@ class SemicolonCodeActionProvider implements vscode.CodeActionProvider {
         context: vscode.CodeActionContext,
         token: vscode.CancellationToken,
     ): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
-        const diagnostics = context.diagnostics.filter(d => d.source === 'Calebh101.force-semicolon.diagnostic');
+        const diagnostics = context.diagnostics.filter(d => d.source === diagnosticSource);
         var fixes: Array<any> = [];
         if (diagnostics.length === 0) {
             return [];

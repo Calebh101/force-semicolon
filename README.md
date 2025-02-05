@@ -1,6 +1,14 @@
 # What is this?
 
-This extension is a simple extension I made to enforce good coding habits and make you put a semicolon at the end of your JavaScript and TypeScript code lines.
+## Summary
+
+This extension helps you use semicolons correctly in JavaScript and TypeScript. It uses ASTs to get a map of your code, and then will parse your code and figure out if the statement is supposed to have a semicolon, not supposed to have a semicolon, or is not a statement. If it is not supposed to have a semicolon, then it makes sure there are none at the end. If there is, it will tell you. If it is supposed to have a semicolon, it detects if there is a semicolon present. If there isn't, then it tells you. If there is, it makes sure there is not more than one (if there is, it'll tell you).
+
+## Features
+
+- Missing Semicolon: detects semicolons that are missing from the end of a statement.
+- Unnecessary Semicolon: detects semicolons wrongly used at the end of function declarations, if statements, etc.
+- Extra Semicolon: detects if you have more than one semicolon at the end of a statement.
 
 This extension is in beta, so be aware that it might not always be perfect. Expect a lot of small releases until this extension exits beta.
 
@@ -108,6 +116,10 @@ This will ignore all semicolon errors in the entire file.
 
 - Bug fix affecting callbacks
 - Documentation fixes
+
+## 0.3.2 - 2/5/25
+
+- Bug fix affecting callbacks
 
 # Is this perfect?
 
