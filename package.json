@@ -4,7 +4,7 @@
   "description": "Forces semicolons to be used at the end of statements in JavaScript and TypeScript. Does not require ESLint.",
   "repository": "https://github.com/Calebh101/force-semicolon",
   "publisher": "Calebh101",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "icon": "images/iconsmall.png",
   "engines": {
     "vscode": "^1.96.0"

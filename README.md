@@ -98,11 +98,16 @@ This will ignore all semicolon errors in the entire file.
 
 ## 0.3.0 - 2/5/25
 
-- Complete overhaul of verification system.
+- Complete overhaul of verification system
     - We switched over from line-based and text-based scanning to AST-based scanning. This not only improves accuracy, it allows the extension to scan single-line files and accurately find incorrect/missing semicolons.
 - New feature: Unnecessary Semicolon: detects and warns you if you put a semicolon after an if statement, function declaration, etc (like a psychopath)
 - New feature: Extra Semicolon: detects and warns you if you put an extra semicolon at the end of a statement
 - You can also now turn off Missing Semicolon, Unnecessasy Semicolon, and Extra Semicolon in VS Code settings
+
+## 0.3.1 - 2/5/25
+
+- Bug fix affecting callbacks
+- Documentation fixes
 
 # Is this perfect?
 

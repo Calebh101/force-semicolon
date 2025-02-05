@@ -78,7 +78,7 @@ function parseAst(document: vscode.TextDocument): any {
 }
 
 function handle(index: number, text: string, document: vscode.TextDocument): object {
-    if (mode == 1) {
+    if (mode === 1) {
         text = removeCommentsOutsideStrings(text).trim();
         var valid = validText(text, document, index);
         var parentheses = handleParentheses(document, index);
@@ -90,7 +90,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
             parenthesis: parentheses,
             comments: comments 
         };
-    } else if (mode == 2) {
+    } else if (mode === 2) {
         var diagnosticsList: Array<any> = [];
         var statements: Array<any> = [];
         var ast = parseAst(document);
@@ -150,6 +150,8 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
 
                     var isInLoopHead = Boolean(path.findParent((parent: any) => isVariableDeclaration && (parent.isForStatement() || parent.isForOfStatement() || parent.isForInStatement()) && path.key === "left"));
                     var isInObjectProperty = Boolean(path.findParent((parent: any) => parent.isObjectProperty()));
+                    var isAsyncFunctionExpression = isFunctionExpression && path.node.async;
+                    var isCallExpression = Boolean(path.findParent((parent: any) => parent.isCallExpression()));
 
                     var { line, column } = node.loc.end;
                     var lineM = line - 1;
@@ -168,7 +170,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     const start = new vscode.Position(lineM, columnP);
                     const end = new vscode.Position(lineM, columnM);
 
-                    if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isExportNamedDeclaration && !isExportDefaultDeclaration) {
+                    if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isExportNamedDeclaration && !isExportDefaultDeclaration && !isCallExpression) {
                         modeS = 1;
                     } else if ((isIfStatement || isWhileStatement || isForStatement || isSwitchStatement || isDoWhileStatement || isFunctionDeclaration || isTryStatement || isClassDeclaration || isClassMethod) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression) {
                         modeS = 2;
@@ -201,6 +203,8 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                         isExportNamedDeclaration,
                         isClassDeclaration,
                         isClassMethod,
+                        isAsyncFunctionExpression,
+                        isCallExpression,
                     });
                 }
             },
