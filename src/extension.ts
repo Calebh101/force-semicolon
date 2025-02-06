@@ -412,7 +412,7 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
     var unnecessarySeverity: string = config.get<string>('unnecessarySemicolonLintType', defaultSeverity) ?? defaultSeverity;
     var extraSeverity: string = config.get<string>('extraSemicolonLintType', defaultSeverity) ?? defaultSeverity;
 
-    if ((config.get<boolean>('debug', debug) ?? debug) === true) {
+    if ((config.get<boolean>('debugMode', debug) ?? debug) === true) {
         debug = true;
     }
 

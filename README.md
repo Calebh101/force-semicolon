@@ -83,6 +83,9 @@ This will ignore all semicolon errors in the entire file.
         - Off: no line
     - Default: Error
 
+- force-semicolon.debugMode: setting that enables/disabled debug mode. This enables action and report logs from this extension. **This is not recommended at all** since this floods the console with 1,000+ logs every single time you type, switch files, and save a file. It does that for each file when VS Code is opened, so it could output **20,000+** logs when started up. As you can imagine, this absolutely *decimates* performance and is highly **not** recommended to turn/keep on.
+    - Default: off
+
 ## Commands
 
 - Analyze All Files (`force-semicolon.analyzeAll`): analyze all JavaScript and TypeScript files in the workspace (automatically called when the extension is loaded)

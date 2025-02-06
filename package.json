@@ -81,10 +81,10 @@
           "default": "Warning",
           "description": "The type of lint triggered when an extra semicolon is present."
         },
-        "force-semicolon.debug": {
+        "force-semicolon.debugMode": {
           "type": "boolean",
           "default": false,
-          "description": "Shows extra logs and reports for extension actions and scanned files. Do not activate this unless necessary, as it floods the console with 1000+ messages for each type, file save, file switch, etc. and absolutely decimates performance."
+          "description": "Shows extra logs and reports for extension actions and scanned files. Do not activate this unless necessary, as it floods the console with 500+ logs for each type, file save, file switch, etc. and absolutely decimates performance."
         }
       }
     }
