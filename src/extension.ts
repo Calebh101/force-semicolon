@@ -306,6 +306,7 @@ export function activate(context: vscode.ExtensionContext) {
 	print('force-semicolon is active (debug: ' + debug + ')');
     const diagnostics = vscode.languages.createDiagnosticCollection('a');
     const editor = vscode.window.activeTextEditor;
+    context.subscriptions.push(diagnostics);
 
     if (editor) {
         action('extension.active');
@@ -340,22 +341,56 @@ export function activate(context: vscode.ExtensionContext) {
         fileAction('workspace.onDidRenameFiles', diagnostics);
     });
 
-    let analyzeAllCommand = vscode.commands.registerCommand('force-semicolon.analyzeAll', () => {
-        action('command.activate.analyzeAll');
+    context.subscriptions.push(vscode.commands.registerCommand('force-semicolon.analyze.all', () => {
+        action('command.activate.analyze.all');
         analyzeAll(diagnostics);
-    });
-
-    context.subscriptions.push(diagnostics);
-    context.subscriptions.push(analyzeAllCommand);
+    }));
 
     vscode.languages.registerCodeActionsProvider(
         { language: 'javascript', scheme: 'file' },
-        new SemicolonCodeActionProvider()
+        new SemicolonCodeActionProvider(),
     );
     vscode.languages.registerCodeActionsProvider(
         { language: 'typescript', scheme: 'file' },
-        new SemicolonCodeActionProvider()
+        new SemicolonCodeActionProvider(),
     );
+    vscode.languages.registerCodeActionsProvider(
+        { language: 'html', scheme: 'file' },
+        new SemicolonCodeActionProvider(),
+    );
+}
+
+async function getAllDocuments(type: string): Promise<Array<vscode.TextDocument> | null> {
+    switch (type) {
+        case 'current':
+            return vscode.window.activeTextEditor ? [vscode.window.activeTextEditor.document] : null;
+        case 'open':
+            return vscode.window.tabGroups.all.flatMap(({ tabs }) => tabs.map(tab => {
+                let uri;
+            
+                if (tab.input instanceof vscode.TabInputText || tab.input instanceof vscode.TabInputNotebook) {
+                    uri = tab.input.uri;
+                } else if (tab.input instanceof vscode.TabInputTextDiff || tab.input instanceof vscode.TabInputNotebookDiff) {
+                    uri = tab.input.original;
+                }
+            
+                if (uri) {
+                    const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uri.toString());
+                    if (document) {
+                        return document;
+                    }
+                }
+                return null;
+            })).filter(Boolean).filter(item => item !== null);
+        case 'all':
+            const files = await vscode.workspace.findFiles('**/*');
+            const documentPromises = files.map(file => vscode.workspace.openTextDocument(file));
+            const documents = await Promise.all(documentPromises);
+            return documents;
+        default:
+            error("invalid document type: " + type);
+            return null;
+    }
 }
 
 function fileAction(name: string, diagnostics: vscode.DiagnosticCollection) {

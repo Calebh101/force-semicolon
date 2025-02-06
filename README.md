@@ -59,7 +59,7 @@ This will ignore all semicolon errors in the entire file.
 
 ## Settings
 
-- force-semicolon.missingSemicolonLintType: setting that decides if VS Code should give an error, warning, or info dialogue for missing semicolons
+- `force-semicolon.missingSemicolonLintType`: setting that decides if VS Code should give an error, warning, or info dialogue for missing semicolons
     - Options:
         - Error: red line and notification
         - Warning: yellow line and notification
@@ -67,7 +67,7 @@ This will ignore all semicolon errors in the entire file.
         - Off: no line
     - Default: Error
 
-- force-semicolon.unnecessarySemicolonLintType: setting that decides if VS Code should give an error, warning, or info dialogue for unnecessary semicolons (semicolons after function declarations, if statements, etc.)
+- `force-semicolon.unnecessarySemicolonLintType`: setting that decides if VS Code should give an error, warning, or info dialogue for unnecessary semicolons (semicolons after function declarations, if statements, etc.)
     - Options:
         - Error: red line and notification
         - Warning: yellow line and notification
@@ -75,7 +75,7 @@ This will ignore all semicolon errors in the entire file.
         - Off: no line
     - Default: Error
 
-- force-semicolon.extraSemicolonLintType: setting that decides if VS Code should give an error, warning, or info dialogue for extra semicolons after statements
+- `force-semicolon.extraSemicolonLintType`: setting that decides if VS Code should give an error, warning, or info dialogue for extra semicolons after statements
     - Options:
         - Error: red line and notification
         - Warning: yellow line and notification
@@ -83,12 +83,24 @@ This will ignore all semicolon errors in the entire file.
         - Off: no line
     - Default: Error
 
-- force-semicolon.debugMode: setting that enables/disabled debug mode. This enables action and report logs from this extension. **This is not recommended at all** since this floods the console with 1,000+ logs every single time you type, switch files, and save a file. It does that for each file when VS Code is opened, so it could output **20,000+** logs when started up. As you can imagine, this absolutely *decimates* performance and is highly **not** recommended to turn/keep on.
+- `force-semicolon.debugMode`: setting that enables/disabled debug mode. This enables action and report logs from this extension. **This is not recommended at all** since this floods the console with 1,000+ logs every single time you type, switch files, and save a file. It does that for each file when VS Code is opened, so it could output **20,000+** logs when started up. As you can imagine, this absolutely *decimates* performance and is highly **not** recommended to turn/keep on.
     - Default: off
 
 ## Commands
 
-- Analyze All Files (`force-semicolon.analyzeAll`): analyze all JavaScript and TypeScript files in the workspace (automatically called when the extension is loaded)
+- Analyze All Files (`force-semicolon.analyze.all`): analyze all JavaScript and TypeScript files in the workspace (automatically called when the extension is loaded)
+- Fix Missing Semicolons (Current File) (`force-semicolon.fix.current.missing`): fix all Missing Semicolon errors in the current file
+- Fix Unnecessary Semicolons (Current File) (`force-semicolon.fix.current.unnecessary`): fix all Unnecessary Semicolon errors in the current file
+- Fix Extra Semicolons (Current File) (`force-semicolon.fix.current.extra`): fix all Extra Semicolon errors in the current file
+- Fix All Semicolons (Current File) (`force-semicolon.fix.current.all`): fix all semicolon errors (Missing Semicolon, Unnecessary Semicolon, Extra Semicolon) in the current file
+- Fix Missing Semicolons (All Open Files) (`force-semicolon.fix.open.missing`): fix all Missing Semicolon errors in all files that are open in the workspace (even if not actively selected)
+- Fix Unnecessary Semicolons (All Open Files) (`force-semicolon.fix.open.unnecessary`): fix all Unnecessary Semicolon errors in all files that are open in the workspace (even if not actively selected)
+- Fix Extra Semicolons (All Open Files) (`force-semicolon.fix.open.extra`): fix all Extra Semicolon errors in all files that are open in the workspace (even if not actively selected)
+- Fix All Semicolons (All Open Files) (`force-semicolon.fix.open.all`): fix all semicolon errors (Missing Semicolon, Unnecessary Semicolon, Extra Semicolon) in all files that are open in the workspace (even if not actively selected)
+- Fix Missing Semicolons (All Files) (`force-semicolon.fix.all.missing`): fix all Missing Semicolon errors in all files in the current workspace
+- Fix Unnecessary Semicolons (All Files) (`force-semicolon.fix.all.unnecessary`): fix all Unnecessary Semicolon errors in all files in the current workspace
+- Fix Extra Semicolons (All Files) (`force-semicolon.fix.all.extra`): fix all Extra Semicolon errors in all files in the current workspace
+- Fix All Semicolons (All Files) (`force-semicolon.fix.all.all`): fix all semicolon errors (Missing Semicolon, Unnecessary Semicolon, Extra Semicolon) in all files in the current workspace
 
 # Changelog
 

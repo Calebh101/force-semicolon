@@ -21,10 +21,23 @@
   "contributes": {
     "commands": [
       {
-        "command": "force-semicolon.analyzeAll",
+        "command": "force-semicolon.analyze.all",
         "title": "Analyze All Files",
         "category": "Force Semicolon"
-      }
+      },
+
+      {"command": "force-semicolon.fix.current.missing", "title": "Fix Missing Semicolons (Current File)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.current.unnecessary", "title": "Fix Unnecessary Semicolons (Current File)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.current.extra", "title": "Fix Extra Semicolons (Current File)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.current.all", "title": "Fix All Semicolon Issues (Current File)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.open.missing", "title": "Fix Missing Semicolons (All Open Files)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.open.unnecessary", "title": "Fix Unnecessary Semicolons (All Open Files)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.open.extra", "title": "Fix Extra Semicolons (All Open Files)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.open.all", "title": "Fix All Semicolon Issues (All Open Files)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.all.missing", "title": "Fix Missing Semicolons (All Files)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.all.unnecessary", "title": "Fix Unnecessary Semicolons (All Files)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.all.extra", "title": "Fix Extra Semicolons (All Files)", "category": "Force Semicolon"},
+      {"command": "force-semicolon.fix.all.all", "title": "Fix All Semicolon Issues (All Files)", "category": "Force Semicolon"}
     ],
     "configuration": {
       "type": "object",
