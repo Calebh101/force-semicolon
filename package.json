@@ -4,7 +4,7 @@
   "description": "Helps you use semicolons correctly in JavaScript and TypeScript.",
   "repository": "https://github.com/Calebh101/force-semicolon",
   "publisher": "Calebh101",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "icon": "images/iconsmall.png",
   "engines": {
     "vscode": "^1.96.0"
@@ -84,7 +84,7 @@
         "force-semicolon.debug": {
           "type": "boolean",
           "default": false,
-          "description": "Shows extra logs and reports for extension actions and scanned files."
+          "description": "Shows extra logs and reports for extension actions and scanned files. Do not activate this unless necessary, as it floods the console with 1000+ messages for each type, file save, file switch, etc. and absolutely decimates performance."
         }
       }
     }

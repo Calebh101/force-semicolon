@@ -16,6 +16,8 @@ This extension is in beta, so be aware that it might not always be perfect. Expe
 
 ## Comments
 
+### Ignore a statement
+
 To ignore a statement: Simply insert this comment above the line, like so:
 
 ```javascript
@@ -24,6 +26,27 @@ function("function without a semicolon")
 ```
 
 This will ignore the statement directly below the comment.
+
+**Tip**: Ignore statements have to be directly before the expression. For example:
+
+```javascript
+if (condition) return;
+// force-semicolon: ignore
+else console.log("test")
+```
+
+Even with the `ignore` there, it will still give a Missing Semicolon error for `console.log("test")`. This is because the `force-semicolon: ignore` comment is actually ignoring the `else`. Because the `else` doesn't use semicolons, this cancels out the `force-semicolon: ignore` action.
+
+To ignore the statement inside the `else`, you will need to put the `force-semicolon: ignore` directly before the expression. For example:
+
+```javascript
+if (condition) return;
+else /* force-semicolon: ignore */ console.log("test")
+```
+
+This will successfully ignore `console.log("test")`.
+
+### Ignore a file
 
 To ignore a file: Simply insert this comment anywhere in the file, like so:
 
@@ -127,6 +150,15 @@ This will ignore all semicolon errors in the entire file.
 - Improved documentation
 - Optimized extension
 
+## 0.3.4 - 2/5/25
+
+- Bug fix affecting if statements (and others that use this) that do not have braces
+- Improved documentation
+
 # Is this perfect?
 
 No! This project may give false positives for several scenarios, because I can't test everything! Any contribution is greatly appreciated.
+
+# Support
+
+For feedback and support, email me at [calebh101dev@icloud.com](mailto:calebh101dev@icloud.com)
