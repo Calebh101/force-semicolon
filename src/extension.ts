@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
 import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
-import { isForInStatement, isForOfStatement } from '@babel/types';
 
-var mode: number = 2;
 var debug: boolean = false;
 var html: boolean = false;
 var allowFileAction: boolean = false;
@@ -91,206 +89,194 @@ function parseAst(document: vscode.TextDocument): any {
 }
 
 function handle(index: number, text: string, document: vscode.TextDocument): object {
-    if (mode === 1) {
-        return { 
-            result: false, 
-            error: "mode 1 is deprecated",
+    var diagnosticsList: Array<any> = [];
+    var statements: Array<any> = [];
+    var ast = parseAst(document);
+
+    if (!ast) {
+        return {diagnostics: []};
+    }
+
+    const comments = (ast.comments.map((comment: any) => comment.value)).join(' ');
+
+    if (comments.includes('force-semicolon: ignore-all')) {
+        addReport(-1, 'comment.action.ignore-all');
+        return {
+            diagnostics: [],
+            comments: comments,
         };
-    } else if (mode === 2) {
-        var diagnosticsList: Array<any> = [];
-        var statements: Array<any> = [];
-        var ast = parseAst(document);
+    }
+    
+    traverse(ast, {
+        enter(path: any) {
+            var modeS = 0;
+            var node = path.node;
+            var isSingleStatement = false;
 
-        if (!ast) {
-            return {diagnostics: []};
-        }
+            if (!node.loc || !node.loc.end) {
+                error("invalid node location: " + node.loc);
+                return;
+            }
 
-        const comments = (ast.comments.map((comment: any) => comment.value)).join(' ');
+            if (isFunctionStatement && node.consequent && node.consequent.type !== "BlockStatement") {
+                isSingleStatement = true;
+            }
 
-        if (comments.includes('force-semicolon: ignore-all')) {
-            addReport(-1, 'comment.action.ignore-all');
-            return {
-                diagnostics: [],
-                comments: comments,
-            };
-        }
-        
-        traverse(ast, {
-            enter(path: any) {
-                var modeS = 0;
-                var node = path.node;
-                var isSingleStatement = false;
+            if (isElseStatement && node.alternate && node.alternate.type !== "BlockStatement") {
+                isSingleStatement = true;
+            }
 
-                if (!node.loc || !node.loc.end) {
-                    error("invalid node location: " + node.loc);
-                    return;
+            var comments = node.leadingComments ?? [];
+            if (comments.length > 0) {
+                const comment = comments[comments.length - 1];
+                if (comment.value.includes('force-semicolon: ignore')) {
+                    modeS = -1;
+                }
+            }
+
+            if (modeS >= 0) {
+                // I don't even know what's going on here
+                var isExpressionStatement = path.isExpressionStatement();
+                var isVariableDeclaration = path.isVariableDeclaration();
+                var isReturnStatement = path.isReturnStatement();
+                var isIfStatement = path.isIfStatement();
+                var isElseStatement = path.parentPath?.isIfStatement() && path.key === "alternate";
+                var isForStatement = path.isForStatement();
+                var isWhileStatement = path.isWhileStatement();
+                var isDoWhileStatement = path.isDoWhileStatement();
+                var isSwitchStatement = path.isSwitchStatement();
+                var isFunctionDeclaration = path.isFunctionDeclaration();
+                var isFunctionExpression = path.isFunctionExpression();
+                var isArrowFunctionExpression = path.isArrowFunctionExpression();
+                var isTryStatement = path.isTryStatement();
+                var isThrowStatement = path.isThrowStatement();
+                var isImportDeclaration = path.isImportDeclaration();
+                var isExportDeclaration = path.isExportDeclaration();
+                var isClassDeclaration = path.isClassDeclaration();
+                var isClassMethod = path.isClassMethod();
+                var isExportNamedDeclaration = path.isExportNamedDeclaration();
+                var isExportDefaultDeclaration = path.isExportDefaultDeclaration();
+                var isCallExpression = path.isCallExpression();
+                var isForInStatement = path.isForInStatement();
+                var isForOfStatement = path.isForOfStatement();
+
+                var isInLoopHead = Boolean(path.findParent((parent: any) => isVariableDeclaration && (parent.isForStatement() || parent.isForOfStatement() || parent.isForInStatement()) && path.key === "left"));
+                var isInObjectProperty = Boolean(path.findParent((parent: any) => parent.isObjectProperty()));
+                var isAsyncFunctionExpression = isFunctionExpression && path.node.async;
+                var isFunctionArgument = (path.isFunctionExpression() || path.isArrowFunctionExpression()) && path.parentPath?.isCallExpression() && path.key !== "callee";
+                var isFunctionStatement = isIfStatement || isForStatement || isWhileStatement || isDoWhileStatement || isForInStatement || isForOfStatement;
+                
+                var { line, column } = node.loc.end;
+                var lineM = line - 1;
+                var columnM = column - 1;
+                var columnP = column + 1;
+
+                if (lineM <= 0) {
+                    lineM = 0;
                 }
 
-                if (isFunctionStatement && node.consequent && node.consequent.type !== "BlockStatement") {
-                    isSingleStatement = true;
+                if (columnM <= 0) {
+                    columnM = 0;
                 }
 
-                if (isElseStatement && node.alternate && node.alternate.type !== "BlockStatement") {
-                    isSingleStatement = true;
-                }
+                const start = new vscode.Position(lineM, columnP);
+                const end = new vscode.Position(lineM, columnM);
 
-                var comments = node.leadingComments ?? [];
-                if (comments.length > 0) {
-                    const comment = comments[comments.length - 1];
-                    if (comment.value.includes('force-semicolon: ignore')) {
-                        modeS = -1;
-                    }
-                }
-
-                if (modeS >= 0) {
-                    // I don't even know what's going on here
-                    var isExpressionStatement = path.isExpressionStatement();
-                    var isVariableDeclaration = path.isVariableDeclaration();
-                    var isReturnStatement = path.isReturnStatement();
-                    var isIfStatement = path.isIfStatement();
-                    var isElseStatement = path.parentPath?.isIfStatement() && path.key === "alternate";
-                    var isForStatement = path.isForStatement();
-                    var isWhileStatement = path.isWhileStatement();
-                    var isDoWhileStatement = path.isDoWhileStatement();
-                    var isSwitchStatement = path.isSwitchStatement();
-                    var isFunctionDeclaration = path.isFunctionDeclaration();
-                    var isFunctionExpression = path.isFunctionExpression();
-                    var isArrowFunctionExpression = path.isArrowFunctionExpression();
-                    var isTryStatement = path.isTryStatement();
-                    var isThrowStatement = path.isThrowStatement();
-                    var isImportDeclaration = path.isImportDeclaration();
-                    var isExportDeclaration = path.isExportDeclaration();
-                    var isClassDeclaration = path.isClassDeclaration();
-                    var isClassMethod = path.isClassMethod();
-                    var isExportNamedDeclaration = path.isExportNamedDeclaration();
-                    var isExportDefaultDeclaration = path.isExportDefaultDeclaration();
-                    var isCallExpression = path.isCallExpression();
-                    var isForInStatement = path.isForInStatement();
-                    var isForOfStatement = path.isForOfStatement();
-
-                    var isInLoopHead = Boolean(path.findParent((parent: any) => isVariableDeclaration && (parent.isForStatement() || parent.isForOfStatement() || parent.isForInStatement()) && path.key === "left"));
-                    var isInObjectProperty = Boolean(path.findParent((parent: any) => parent.isObjectProperty()));
-                    var isAsyncFunctionExpression = isFunctionExpression && path.node.async;
-                    var isFunctionArgument = (path.isFunctionExpression() || path.isArrowFunctionExpression()) && path.parentPath?.isCallExpression() && path.key !== "callee";
-                    var isFunctionStatement = isIfStatement || isForStatement || isWhileStatement || isDoWhileStatement || isForInStatement || isForOfStatement;
-                    
-                    var { line, column } = node.loc.end;
-                    var lineM = line - 1;
-                    var columnM = column - 1;
-                    var columnP = column + 1;
-
-                    if (lineM <= 0) {
-                        lineM = 0;
-                    }
-
-                    if (columnM <= 0) {
-                        columnM = 0;
-                    }
-
-                    const start = new vscode.Position(lineM, columnP);
-                    const end = new vscode.Position(lineM, columnM);
-
-                    if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isExportNamedDeclaration && !isExportDefaultDeclaration && !isFunctionArgument) {
-                        modeS = 1;
-                    } else if ((isFunctionStatement || isFunctionDeclaration || isElseStatement || isTryStatement || isClassDeclaration || isClassMethod) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isSingleStatement) {
-                        modeS = 2;
-                    } else {
-                        modeS = 0;
-                    }
-
-                    statements.push({
-                        mode: modeS,
-                        type: node.type,
-                        start: start,
-                        end: end,
-                        comments: comments,
-                        isExpressionStatement,
-                        isVariableDeclaration,
-                        isReturnStatement,
-                        isIfStatement,
-                        isForStatement,
-                        isWhileStatement,
-                        isDoWhileStatement,
-                        isSwitchStatement,
-                        isFunctionDeclaration,
-                        isFunctionExpression,
-                        isTryStatement,
-                        isInLoopHead,
-                        isInObjectProperty,
-                        isThrowStatement,
-                        isImportDeclaration,
-                        isExportDeclaration,
-                        isExportDefaultDeclaration,
-                        isExportNamedDeclaration,
-                        isClassDeclaration,
-                        isClassMethod,
-                        isAsyncFunctionExpression,
-                        isCallExpression,
-                        isFunctionArgument,
-                        isForOfStatement,
-                        isForInStatement,
-                        isSingleStatement,
-                        isFunctionStatement,
-                        isElseStatement,
-                    });
-                }
-            },
-        });
-
-        for (let i = 0; i < statements.length; i++) {
-            const statement = statements[i];
-            const start = statement.start;
-            const end = statement.end;
-            const range = new vscode.Range(start, end);
-            const text = document.getText(range);
-
-            if (statement.mode === 1) {
-                if (text.includes(';;')) {
-                    const diagnostic = new vscode.Diagnostic(
-                        range,
-                        extraSemicolonMessage,
-                    );
-
-                    diagnosticsList.push({diagnostic: diagnostic, mode: 3});
-                    addReport(i, 'statements.statement.diagnostic.add.1.1', {'text': text, 'range': range, 'mode': 1, "statement": statement});
+                if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isExportNamedDeclaration && !isExportDefaultDeclaration && !isFunctionArgument) {
+                    modeS = 1;
+                } else if ((isFunctionStatement || isFunctionDeclaration || isElseStatement || isTryStatement || isClassDeclaration || isClassMethod) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isSingleStatement) {
+                    modeS = 2;
                 } else {
-                    if (text.includes(';')) {
-                        continue;
-                    }
-
-                    const diagnostic = new vscode.Diagnostic(
-                        range,
-                        noSemicolonMessage,
-                    );
-
-                    diagnosticsList.push({diagnostic: diagnostic, mode: 1});
-                    addReport(i, 'statements.statement.diagnostic.add.1.0', {'text': text, 'range': range, 'mode': 1, "statement": statement});
+                    modeS = 0;
                 }
-            } else if (statement.mode === 2) {
-                if (!text.includes(';')) {
+
+                statements.push({
+                    mode: modeS,
+                    type: node.type,
+                    start: start,
+                    end: end,
+                    comments: comments,
+                    isExpressionStatement,
+                    isVariableDeclaration,
+                    isReturnStatement,
+                    isIfStatement,
+                    isForStatement,
+                    isWhileStatement,
+                    isDoWhileStatement,
+                    isSwitchStatement,
+                    isFunctionDeclaration,
+                    isFunctionExpression,
+                    isTryStatement,
+                    isInLoopHead,
+                    isInObjectProperty,
+                    isThrowStatement,
+                    isImportDeclaration,
+                    isExportDeclaration,
+                    isExportDefaultDeclaration,
+                    isExportNamedDeclaration,
+                    isClassDeclaration,
+                    isClassMethod,
+                    isAsyncFunctionExpression,
+                    isCallExpression,
+                    isFunctionArgument,
+                    isForOfStatement,
+                    isForInStatement,
+                    isSingleStatement,
+                    isFunctionStatement,
+                    isElseStatement,
+                });
+            }
+        },
+    });
+
+    for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i];
+        const start = statement.start;
+        const end = statement.end;
+        const range = new vscode.Range(start, end);
+        const text = document.getText(range);
+
+        if (statement.mode === 1) {
+            if (text.includes(';;')) {
+                const diagnostic = new vscode.Diagnostic(
+                    range,
+                    extraSemicolonMessage,
+                );
+
+                diagnosticsList.push({diagnostic: diagnostic, mode: 3});
+                addReport(i, 'statements.statement.diagnostic.add.1.1', {'text': text, 'range': range, 'mode': 1, "statement": statement});
+            } else {
+                if (text.includes(';')) {
                     continue;
                 }
 
                 const diagnostic = new vscode.Diagnostic(
                     range,
-                    unnecessarySemicolonMessage,
+                    noSemicolonMessage,
                 );
 
-                diagnosticsList.push({diagnostic: diagnostic, mode: 2});
-                addReport(i, 'statements.statement.diagnostic.add.2.0', {'text': text, 'range': range, 'mode': 2, "statement": statement});
+                diagnosticsList.push({diagnostic: diagnostic, mode: 1});
+                addReport(i, 'statements.statement.diagnostic.add.1.0', {'text': text, 'range': range, 'mode': 1, "statement": statement});
             }
-        }
+        } else if (statement.mode === 2) {
+            if (!text.includes(';')) {
+                continue;
+            }
 
-        return {
-            diagnostics: diagnosticsList,
-            comments: comments,
-        };
-    } else {
-        error("handle: invalid mode: " + mode);
-        return {
-            diagnostics: [],
-        };
+            const diagnostic = new vscode.Diagnostic(
+                range,
+                unnecessarySemicolonMessage,
+            );
+
+            diagnosticsList.push({diagnostic: diagnostic, mode: 2});
+            addReport(i, 'statements.statement.diagnostic.add.2.0', {'text': text, 'range': range, 'mode': 2, "statement": statement});
+        }
     }
+
+    return {
+        diagnostics: diagnosticsList,
+        comments: comments,
+    };
 }
 
 function getSeverity(input: string): vscode.DiagnosticSeverity | null {
@@ -416,7 +402,7 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
     report["i"] = {
         "document": document.uri.fsPath,
         "language": document.languageId,
-        "mode": mode,
+        "mode": 2,
     };
 
     var config = vscode.workspace.getConfiguration('force-semicolon');
@@ -430,71 +416,23 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
         debug = true;
     }
 
-    if (mode === 1) {
-        for (let i = 0; i < document.lineCount; i++) {
-            var origLineText: string = document.lineAt(i).text;
-            var lineText: string = origLineText.trim();
-
-            if (lineText.length > 0) {
-                if (lineText.startsWith('//')) {
-                    if (lineText.includes("force-semicolon: ignore-all")) {
-                        ignoreAll = true;
-                        addReport(i, "comment.action", "general.all.ignore");
-                    } else if (lineText.includes("force-semicolon: ignore")) {
-                        i++;
-                        addReport(i, "comment.action", "general.one.ignore");
-                    } else {
-                        addReport(i, "comment.generic");
-                    }
-                } else {
-                    const result: Record<string, any> = handle(i, lineText, document);
-                    addReport(i, (result.result ? "line.scan.success" : (("error" in result) ? "line.scan.error" : "line.scan.fail")), result);
-                    if (result.result) {
-                        const lineLength = origLineText.length;
-                        const lastCharPosition = new vscode.Position(i, lineLength - 1);
-                        const range = new vscode.Range(lastCharPosition, lastCharPosition);
-
-                        const diagnostic = new vscode.Diagnostic(
-                            range,
-                            noSemicolonMessage,
-                        );
-                        diagnosticsList.push(diagnostic);
-                    } else {
-                        if ("error" in result) {
-                            error(result.error);
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-    } else if (mode === 2) {
-        const result: Record<string, any> = handle(-1, "", document);
-        diagnosticsList = result.diagnostics;
-    }
-
+    const result: Record<string, any> = handle(-1, "", document);
+    diagnosticsList = result.diagnostics;
     var diagnosticsS: Array<vscode.Diagnostic> = [];
     diagnosticsList.forEach((item: any, index: number) => {
-        var modeS = 9;
+        var modeS = 0;
         var diagnostic: vscode.Diagnostic = item.diagnostic;
         var off = 'Off';
         var code = 'unknown';
 
-        if (mode === 1) {
+        if (item.mode === 1) {
             modeS = 1;
-        } else if (mode === 2) {
-            if (item.mode === 1) {
-                modeS = 1;
-            } else if (item.mode === 2) {
-                modeS = 2;
-            } else if (item.mode === 3) {
-                modeS = 3;
-            } else {
-                error("unknown diagnostic.mode: " + item.mode);
-                modeS = 0;
-            }
+        } else if (item.mode === 2) {
+            modeS = 2;
+        } else if (item.mode === 3) {
+            modeS = 3;
         } else {
-            error("unknown mode: " + mode);
+            error("unknown diagnostic.mode: " + item.mode);
             modeS = 0;
         }
 
