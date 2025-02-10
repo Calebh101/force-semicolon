@@ -167,8 +167,12 @@ This will ignore all semicolon errors in the entire file.
 
 ## 0.3.4 - 2/5/25
 
-- Bug fix affecting if statements (and others that use this) that do not have braces
+- Bug fix affecting if statements that do not have braces (and others that can utilize this)
 - Improved documentation
+
+## 0.3.5 - 2/9/25
+
+- Added commands to fix files
 
 # Is this perfect?
 

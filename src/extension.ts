@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
 
-var debug: boolean = false;
+var debug: boolean = true;
 var html: boolean = false;
 var allowFileAction: boolean = false;
 
@@ -32,10 +32,8 @@ function warn(input: any, attachment?: any) {
 }
 
 function printReport(file: string, report: any) {
-    if (debug) {
-        console.log("force-semicolon: report: report is ready (file: " + file + ")");
-        Object.keys(report).slice(0, 100).forEach(key => console.log(key, report[key]));
-    }
+    console.log("force-semicolon: report: report is ready (file: " + file + ")");
+    Object.keys(report).slice(0, 100).forEach(key => console.log(key, report[key]));
 }
 
 function error(input: any, attachment?: any) {
@@ -44,7 +42,7 @@ function error(input: any, attachment?: any) {
 
 function action(input: any, attachment?: any) {
     if (debug) {
-        console.log("force-semicolon: action: " + input, attachment);
+        console.log("force-semicolon: action: " + input, attachment ?? 0);
     }
 }
 
@@ -346,6 +344,48 @@ export function activate(context: vscode.ExtensionContext) {
         analyzeAll(diagnostics);
     }));
 
+    const fixCommands = [
+        "force-semicolon.fix.current.missing",
+        "force-semicolon.fix.current.unnecessary",
+        "force-semicolon.fix.current.extra",
+        "force-semicolon.fix.current.all",
+        "force-semicolon.fix.open.missing",
+        "force-semicolon.fix.open.unnecessary",
+        "force-semicolon.fix.open.extra",
+        "force-semicolon.fix.open.all",
+        "force-semicolon.fix.all.missing",
+        "force-semicolon.fix.all.unnecessary",
+        "force-semicolon.fix.all.extra",
+        "force-semicolon.fix.all.all",
+    ];
+
+    fixCommands.forEach(command => {
+        context.subscriptions.push(vscode.commands.registerCommand(command, async () => {
+            action(`command.activate.${command}`);
+            command = command.replaceAll('force-semicolon.fix.', '');
+
+            const subcommands = command.split('.');
+            const document = subcommands[0];
+            const type = subcommands[1];
+            const documents = await getAllDocuments(document);
+            
+            if (documents === null) {
+                warn("command " + command + " stopped: documents was null");
+                return;
+            }
+
+            documents.forEach(document => {
+                if (type === "all") {
+                    fixDocument(document, "missing-semicolon");
+                    fixDocument(document, "unnecessary-semicolon");
+                    fixDocument(document, "extra-semicolon");
+                } else {
+                    fixDocument(document, type + '-semicolon');
+                }
+            });
+        }));
+    });
+
     vscode.languages.registerCodeActionsProvider(
         { language: 'javascript', scheme: 'file' },
         new SemicolonCodeActionProvider(),
@@ -447,10 +487,6 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
     var unnecessarySeverity: string = config.get<string>('unnecessarySemicolonLintType', defaultSeverity) ?? defaultSeverity;
     var extraSeverity: string = config.get<string>('extraSemicolonLintType', defaultSeverity) ?? defaultSeverity;
 
-    if ((config.get<boolean>('debugMode', debug) ?? debug) === true) {
-        debug = true;
-    }
-
     const result: Record<string, any> = handle(-1, "", document);
     diagnosticsList = result.diagnostics;
     var diagnosticsS: Array<vscode.Diagnostic> = [];
@@ -516,35 +552,49 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
         diagnostics.set(document.uri, diagnosticsS);
     }
 
-    printReport(document.uri.fsPath, report);
+    if (config.get<boolean>('debugMode', false) ?? false) {
+        printReport(document.uri.fsPath, report);
+    }
 }
 
-async function applyFixForEntireDocument(
-    document: vscode.TextDocument,
-    diagnosticCode: string
-) {
+async function fixDocument(document: vscode.TextDocument, type: string) {
+    const name = document.fileName;
+    print("fix document (" + name + "): start: on type " + type);
+
     const diagnostics = vscode.languages.getDiagnostics(document.uri);
-    const relevantDiagnostics = diagnostics.filter(d => d.code === diagnosticCode);
+    print(JSON.stringify(diagnostics));
+    const relevantDiagnostics = diagnostics.filter(d => d.code === type);
+    print(JSON.stringify(relevantDiagnostics));
+
     if (relevantDiagnostics.length === 0) {
+        print("fix document (" + name + "): stop: not enough diagnostics");
         return;
     }
 
     const edit = new vscode.WorkspaceEdit();
     relevantDiagnostics.forEach(diagnostic => {
+        print("fix document (" + name + "): fix: " + type);
         switch (diagnostic.code) {
             case "missing-semicolon":
                 const position = new vscode.Position(diagnostic.range.end.line, diagnostic.range.end.character);
                 edit.insert(document.uri, position, ';');
+                print("fix document (" + name + "): success: fix missing-semicolon");
                 break;
 
             case "unnecessary-semicolon":
             case "extra-semicolon":
+
                 const range = new vscode.Range(diagnostic.range.start, diagnostic.range.end);
                 edit.delete(document.uri, range);
+                print("fix document (" + name + "): success: fix unnecessary-semicolon/extra-semicolon");
                 break;
+            default:
+                error("unknown diagnostic type: " + type);
+                return;
         }
     });
 
+    print("fix document (" + name + "): success: complete");
     await vscode.workspace.applyEdit(edit);
 }
 
