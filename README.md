@@ -167,12 +167,13 @@ This will ignore all semicolon errors in the entire file.
 
 ## 0.3.4 - 2/5/25
 
-- Bug fix affecting if statements that do not have braces (and others that can utilize this)
 - Improved documentation
 
-## 0.3.5 - 2/9/25
+## 0.3.5 - 2/12/25
 
 - Added commands to fix files
+- Fixed bug affecting exports
+- Fixed a bug affecting braceless single-statement expressions like if, while, etcetera
 
 # Is this perfect?
 

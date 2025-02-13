@@ -15,6 +15,8 @@ var extraSemicolonMessage: string = 'Extra semicolon.';
 var defaultReport = {"0": [], "-1": []};
 var report: { [key: string]: any } = defaultReport;
 
+var allowedLanguages = ['javascript', 'typescript', 'javascriptreact', 'typescriptreact', 'html'];
+
 function print(input: any, attachment?: any) {
     if (debug) {
         console.log("force-semicolon: log: " + input, attachment ?? 0);
@@ -109,19 +111,10 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
         enter(path: any) {
             var modeS = 0;
             var node = path.node;
-            var isSingleStatement = false;
 
             if (!node.loc || !node.loc.end) {
                 error("invalid node location: " + node.loc);
                 return;
-            }
-
-            if (isFunctionStatement && node.consequent && node.consequent.type !== "BlockStatement") {
-                isSingleStatement = true;
-            }
-
-            if (isElseStatement && node.alternate && node.alternate.type !== "BlockStatement") {
-                isSingleStatement = true;
             }
 
             var comments = node.leadingComments ?? [];
@@ -149,11 +142,11 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                 var isTryStatement = path.isTryStatement();
                 var isThrowStatement = path.isThrowStatement();
                 var isImportDeclaration = path.isImportDeclaration();
-                var isExportDeclaration = path.isExportDeclaration();
                 var isClassDeclaration = path.isClassDeclaration();
                 var isClassMethod = path.isClassMethod();
                 var isExportNamedDeclaration = path.isExportNamedDeclaration();
                 var isExportDefaultDeclaration = path.isExportDefaultDeclaration();
+                var isExportDeclaration = path.isExportDeclaration();
                 var isCallExpression = path.isCallExpression();
                 var isForInStatement = path.isForInStatement();
                 var isForOfStatement = path.isForOfStatement();
@@ -163,7 +156,9 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                 var isAsyncFunctionExpression = isFunctionExpression && path.node.async;
                 var isFunctionArgument = (path.isFunctionExpression() || path.isArrowFunctionExpression()) && path.parentPath?.isCallExpression() && path.key !== "callee";
                 var isFunctionStatement = isIfStatement || isForStatement || isWhileStatement || isDoWhileStatement || isForInStatement || isForOfStatement;
-                
+                var isFunctionExport = (path.isExportNamedDeclaration() || path.isExportDefaultDeclaration()) && (path.node.declaration?.type === 'FunctionDeclaration' || path.node.declaration?.type === 'FunctionExpression' || path.node.declaration?.type === 'ArrowFunctionExpression' || path.node.expression?.type === 'FunctionExpression' || path.node.expression?.type === 'ArrowFunctionExpression');
+                var isSingleStatement = isFunctionStatement && !path.node.consequent?.body && !path.node.alternate?.body;
+
                 var { line, column } = node.loc.end;
                 var lineM = line - 1;
                 var columnM = column - 1;
@@ -180,7 +175,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                 const start = new vscode.Position(lineM, columnP);
                 const end = new vscode.Position(lineM, columnM);
 
-                if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isExportNamedDeclaration && !isExportDefaultDeclaration && !isFunctionArgument) {
+                if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isFunctionArgument && !isFunctionExport) {
                     modeS = 1;
                 } else if ((isFunctionStatement || isFunctionDeclaration || isElseStatement || isTryStatement || isClassDeclaration || isClassMethod) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isSingleStatement) {
                     modeS = 2;
@@ -222,6 +217,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     isSingleStatement,
                     isFunctionStatement,
                     isElseStatement,
+                    isFunctionExport,
                 });
             }
         },
@@ -386,18 +382,12 @@ export function activate(context: vscode.ExtensionContext) {
         }));
     });
 
-    vscode.languages.registerCodeActionsProvider(
-        { language: 'javascript', scheme: 'file' },
-        new SemicolonCodeActionProvider(),
-    );
-    vscode.languages.registerCodeActionsProvider(
-        { language: 'typescript', scheme: 'file' },
-        new SemicolonCodeActionProvider(),
-    );
-    vscode.languages.registerCodeActionsProvider(
-        { language: 'html', scheme: 'file' },
-        new SemicolonCodeActionProvider(),
-    );
+    allowedLanguages.forEach((language: string) => {
+        vscode.languages.registerCodeActionsProvider(
+            { language: language, scheme: 'file' },
+            new SemicolonCodeActionProvider(),
+        );
+    });
 }
 
 async function getAllDocuments(type: string): Promise<Array<vscode.TextDocument> | null> {
@@ -469,7 +459,7 @@ function addReport(index: number, type: string, input?: string | object) {
 }
 
 function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.DiagnosticCollection) {
-    if (document.languageId !== 'javascript' && document.languageId !== 'typescript' && document.languageId !== 'html') {
+    if (!allowedLanguages.includes(document.languageId)) {
         return;
     }
 
@@ -576,18 +566,20 @@ async function fixDocument(document: vscode.TextDocument, type: string) {
         print("fix document (" + name + "): fix: " + type);
         switch (diagnostic.code) {
             case "missing-semicolon":
-                const position = new vscode.Position(diagnostic.range.end.line, diagnostic.range.end.character);
-                edit.insert(document.uri, position, ';');
+                const positionS = new vscode.Position(diagnostic.range.end.line, diagnostic.range.end.character);
+                edit.insert(document.uri, positionS, ';');
                 print("fix document (" + name + "): success: fix missing-semicolon");
                 break;
 
             case "unnecessary-semicolon":
             case "extra-semicolon":
-
-                const range = new vscode.Range(diagnostic.range.start, diagnostic.range.end);
+                const positionA = new vscode.Position(diagnostic.range.end.line, diagnostic.range.start.character + 1);
+                const positionB = new vscode.Position(diagnostic.range.end.line, diagnostic.range.start.character + 2);
+                const range = new vscode.Range(positionA, positionB);
                 edit.delete(document.uri, range);
                 print("fix document (" + name + "): success: fix unnecessary-semicolon/extra-semicolon");
                 break;
+
             default:
                 error("unknown diagnostic type: " + type);
                 return;

@@ -15,10 +15,24 @@
   "activationEvents": [
     "onLanguage:javascript",
     "onLanguage:typescript",
-    "onLanguage:html"
+    "onLanguage:html",
+    "onLanguage:javascriptreact", 
+    "onLanguage:typescriptreact"
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "languages": [
+      {
+        "id": "javascriptreact",
+        "extensions": [".jsx"],
+        "aliases": ["JSX", "JavaScript React"]
+      },
+      {
+        "id": "typescriptreact",
+        "extensions": [".tsx"],
+        "aliases": ["TSX", "TypeScript React"]
+      }
+    ],
     "commands": [
       {
         "command": "force-semicolon.analyze.all",
