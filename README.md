@@ -181,4 +181,4 @@ No! This project may give false positives for several scenarios, because I can't
 
 # Support
 
-For feedback and support, email me at [calebh101dev@icloud.com](mailto:calebh101dev@icloud.com)
+For feedback and support, email me at [calebh101dev@icloud.com](mailto:calebh101dev@icloud.com).
