@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
+import babel from '@babel/core';
 
-var debug: boolean = true;
+var debug: boolean = process.env.DEBUG !== null;
 var html: boolean = false;
 var allowFileAction: boolean = false;
 
@@ -73,6 +74,7 @@ function parseAst(document: vscode.TextDocument): any {
             print("text was null: " + text);
             return null;
         }
+
         const ast = parse(text, {
             sourceType: "module",
             ranges: true,
@@ -85,6 +87,15 @@ function parseAst(document: vscode.TextDocument): any {
     } catch (e) {
         warn("error with parsing: " + e);
         return null;
+    }
+}
+
+function isValidCode(code: string) {
+    try {
+      babel.parseSync(code);
+      return true;
+    } catch (e) {
+      return false;
     }
 }
 
@@ -126,7 +137,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
             }
 
             if (modeS >= 0) {
-                // I don't even know what's going on here
+                // I lost track of this section, good luck
                 var isExpressionStatement = path.isExpressionStatement();
                 var isVariableDeclaration = path.isVariableDeclaration();
                 var isReturnStatement = path.isReturnStatement();
@@ -151,6 +162,8 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                 var isForInStatement = path.isForInStatement();
                 var isForOfStatement = path.isForOfStatement();
 
+                var isObjectProperty = path.node.type === 'ObjectProperty';
+                var isInterfaceDeclaration = path.node.type === 'TSInterfaceDeclaration' || path.node.declaration?.type === 'TSInterfaceDeclaration';
                 var isInLoopHead = Boolean(path.findParent((parent: any) => isVariableDeclaration && (parent.isForStatement() || parent.isForOfStatement() || parent.isForInStatement()) && path.key === "left"));
                 var isInObjectProperty = Boolean(path.findParent((parent: any) => parent.isObjectProperty()));
                 var isAsyncFunctionExpression = isFunctionExpression && path.node.async;
@@ -175,9 +188,9 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                 const start = new vscode.Position(lineM, columnP);
                 const end = new vscode.Position(lineM, columnM);
 
-                if ((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isFunctionArgument && !isFunctionExport) {
+                if (((isExpressionStatement || isVariableDeclaration || isReturnStatement || isFunctionExpression || isDoWhileStatement || isThrowStatement || isImportDeclaration || isExportDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isFunctionArgument && !isFunctionExport) && !isInterfaceDeclaration && !isInObjectProperty) {
                     modeS = 1;
-                } else if ((isFunctionStatement || isFunctionDeclaration || isElseStatement || isTryStatement || isClassDeclaration || isClassMethod) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isSingleStatement) {
+                } else if ((isFunctionStatement || isFunctionDeclaration || isElseStatement || isTryStatement || isClassDeclaration || isClassMethod || isInterfaceDeclaration) && !(isVariableDeclaration && isInLoopHead) && !isArrowFunctionExpression && !isSingleStatement) {
                     modeS = 2;
                 } else {
                     modeS = 0;
@@ -218,6 +231,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                     isFunctionStatement,
                     isElseStatement,
                     isFunctionExport,
+                    isObjectProperty,
                 });
             }
         },

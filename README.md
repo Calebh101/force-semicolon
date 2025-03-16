@@ -7,10 +7,8 @@ This extension helps you use semicolons correctly in JavaScript and TypeScript. 
 ## Features
 
 - Missing Semicolon: detects semicolons that are missing from the end of a statement.
-- Unnecessary Semicolon: detects semicolons wrongly used at the end of function declarations, if statements, etc.
+- Unnecessary Semicolon: detects semicolons wrongly used at the end of control statements.
 - Extra Semicolon: detects if you have more than one semicolon at the end of a statement.
-
-This extension is in beta, so be aware that it might not always be perfect. Expect a lot of small releases until this extension exits beta.
 
 # How to Use
 
@@ -32,10 +30,10 @@ This will ignore the statement directly below the comment.
 ```javascript
 if (condition) return;
 // force-semicolon: ignore
-else console.log("test")
+else console.log("test") /// An error will be shown here
 ```
 
-Even with the `ignore` there, it will still give a Missing Semicolon error for `console.log("test")`. This is because the `force-semicolon: ignore` comment is actually ignoring the `else`. Because the `else` doesn't use semicolons, this cancels out the `force-semicolon: ignore` action.
+Even with the `ignore` there, it will still give a Missing Semicolon error for `console.log("test")`. This is because the `force-semicolon: ignore` comment is actually ignoring the `else` part of the statement, since the `else` is recognized as its own statement in the parser. Because the `else` doesn't use semicolons, this cancels out the `force-semicolon: ignore` action.
 
 To ignore the statement inside the `else`, you will need to put the `force-semicolon: ignore` directly before the expression. For example:
 
@@ -53,6 +51,7 @@ To ignore a file: Simply insert this comment anywhere in the file, like so:
 ```javascript
 // force-semicolon: ignore-all
 function("function without a semicolon")
+function("another function without a semicolon")
 ```
 
 This will ignore all semicolon errors in the entire file.
@@ -146,7 +145,7 @@ This will ignore all semicolon errors in the entire file.
 
 - Complete overhaul of verification system
     - We switched over from line-based and text-based scanning to AST-based scanning. This not only improves accuracy, it allows the extension to scan single-line files and accurately find incorrect/missing semicolons.
-- New feature: Unnecessary Semicolon: detects and warns you if you put a semicolon after an if statement, function declaration, etc (like a psychopath)
+- New feature: Unnecessary Semicolon: detects and warns you if you put a semicolon after a control statement (like a psychopath)
 - New feature: Extra Semicolon: detects and warns you if you put an extra semicolon at the end of a statement
 - You can also now turn off Missing Semicolon, Unnecessasy Semicolon, and Extra Semicolon in VS Code settings
 
@@ -173,11 +172,22 @@ This will ignore all semicolon errors in the entire file.
 
 - Added commands to fix files
 - Fixed bug affecting exports
-- Fixed a bug affecting braceless single-statement expressions like if, while, etcetera
+- Fixed a bug affecting single-line control statements
+
+## 1.0.0 - 3/16/25
+
+- Added detection for TypeScript interfaces
+- Added detection for functions in objects or arrays (also called object properties)
+- Improved documentation
+- Exited beta
 
 # Is this perfect?
 
-No! This project may give false positives for several scenarios, because I can't test everything! Any contribution is greatly appreciated.
+No! This project may give false positives/negatives for several scenarios, because I can't test every possible piece of JavaScript! Any contribution or feedback is greatly appreciated.
+
+# Known issues
+
+- HTML is currently not supported
 
 # Support
 

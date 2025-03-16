@@ -4,7 +4,7 @@
   "description": "Helps you use semicolons correctly in JavaScript and TypeScript.",
   "repository": "https://github.com/Calebh101/force-semicolon",
   "publisher": "Calebh101",
-  "version": "0.3.5",
+  "version": "1.0.0",
   "icon": "images/iconsmall.png",
   "engines": {
     "vscode": "^1.96.0"
@@ -15,22 +15,32 @@
   "activationEvents": [
     "onLanguage:javascript",
     "onLanguage:typescript",
-    "onLanguage:html",
-    "onLanguage:javascriptreact", 
-    "onLanguage:typescriptreact"
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact",
+    "onLanguage:html"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "languages": [
       {
         "id": "javascriptreact",
-        "extensions": [".jsx"],
-        "aliases": ["JSX", "JavaScript React"]
+        "extensions": [
+          ".jsx"
+        ],
+        "aliases": [
+          "JSX",
+          "JavaScript React"
+        ]
       },
       {
         "id": "typescriptreact",
-        "extensions": [".tsx"],
-        "aliases": ["TSX", "TypeScript React"]
+        "extensions": [
+          ".tsx"
+        ],
+        "aliases": [
+          "TSX",
+          "TypeScript React"
+        ]
       }
     ],
     "commands": [
@@ -39,19 +49,66 @@
         "title": "Analyze All Files",
         "category": "Force Semicolon"
       },
-
-      {"command": "force-semicolon.fix.current.missing", "title": "Fix Missing Semicolons (Current File)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.current.unnecessary", "title": "Fix Unnecessary Semicolons (Current File)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.current.extra", "title": "Fix Extra Semicolons (Current File)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.current.all", "title": "Fix All Semicolon Issues (Current File)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.open.missing", "title": "Fix Missing Semicolons (All Open Files)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.open.unnecessary", "title": "Fix Unnecessary Semicolons (All Open Files)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.open.extra", "title": "Fix Extra Semicolons (All Open Files)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.open.all", "title": "Fix All Semicolon Issues (All Open Files)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.all.missing", "title": "Fix Missing Semicolons (All Files)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.all.unnecessary", "title": "Fix Unnecessary Semicolons (All Files)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.all.extra", "title": "Fix Extra Semicolons (All Files)", "category": "Force Semicolon"},
-      {"command": "force-semicolon.fix.all.all", "title": "Fix All Semicolon Issues (All Files)", "category": "Force Semicolon"}
+      {
+        "command": "force-semicolon.fix.current.missing",
+        "title": "Fix Missing Semicolons (Current File)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.current.unnecessary",
+        "title": "Fix Unnecessary Semicolons (Current File)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.current.extra",
+        "title": "Fix Extra Semicolons (Current File)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.current.all",
+        "title": "Fix All Semicolon Issues (Current File)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.open.missing",
+        "title": "Fix Missing Semicolons (All Open Files)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.open.unnecessary",
+        "title": "Fix Unnecessary Semicolons (All Open Files)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.open.extra",
+        "title": "Fix Extra Semicolons (All Open Files)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.open.all",
+        "title": "Fix All Semicolon Issues (All Open Files)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.all.missing",
+        "title": "Fix Missing Semicolons (All Files)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.all.unnecessary",
+        "title": "Fix Unnecessary Semicolons (All Files)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.all.extra",
+        "title": "Fix Extra Semicolons (All Files)",
+        "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.fix.all.all",
+        "title": "Fix All Semicolon Issues (All Files)",
+        "category": "Force Semicolon"
+      }
     ],
     "configuration": {
       "type": "object",
@@ -131,6 +188,10 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/plugin-transform-typescript": "^7.26.8",
+    "@babel/preset-typescript": "^7.26.0",
+    "@types/babel__core": "^7.20.5",
     "@types/babel__traverse": "^7.20.6",
     "@types/estraverse": "^5.1.7",
     "@types/estree": "^1.0.6",
@@ -141,13 +202,14 @@
     "@typescript-eslint/parser": "^8.17.0",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.25.1",
     "eslint": "^9.16.0",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.7.2"
   },
   "dependencies": {
     "@babel/parser": "^7.26.7",
+    "@babel/plugin-syntax-typescript": "^7.25.9",
     "@babel/traverse": "^7.26.7",
     "@babel/types": "^7.26.7"
   }
