@@ -6,6 +6,7 @@ import babel from '@babel/core';
 var debug: boolean = process.env.DEBUG !== null;
 var html: boolean = false;
 var allowFileAction: boolean = false;
+var version = "1.0.1";
 
 var defaultSeverity = 'error';
 var diagnosticSource = 'force-semicolon';
@@ -168,6 +169,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                 var isFunctionArgument: boolean = (path.isFunctionExpression() || path.isArrowFunctionExpression()) && path.parentPath?.isCallExpression() && path.key !== "callee"; // If we're an argument in a function
                 var isFunctionStatement: boolean = isIfStatement || isForStatement || isWhileStatement || isDoWhileStatement || isForInStatement || isForOfStatement; // Badly named, but if we're any of these block types
                 var isFunctionExport: boolean = (path.isExportNamedDeclaration() || path.isExportDefaultDeclaration()) && (path.node.declaration?.type === 'FunctionDeclaration' || path.node.declaration?.type === 'FunctionExpression' || path.node.declaration?.type === 'ArrowFunctionExpression' || path.node.expression?.type === 'FunctionExpression' || path.node.expression?.type === 'ArrowFunctionExpression'); // If this is a function we're exporting
+                var isClassExport: boolean = (path.isExportNamedDeclaration() || path.isExportDefaultDeclaration()) && (path.node.declaration?.type === "ClassDeclaration" || path.node.declaration?.type === "ClassExpression" || path.node.expression?.type === "ClassExpression");
                 var isSingleStatement: boolean = isFunctionStatement && !path.node.consequent?.body && !path.node.alternate?.body; // If this is just a braceless block statement
 
                 var { line, column } = node.loc.end;
@@ -188,7 +190,10 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                             isDoWhileStatement ||
                             isThrowStatement ||
                             isImportDeclaration ||
-                            isExportDeclaration
+                            (
+                                isExportDeclaration &&
+                                !isClassExport
+                            )
                         ) && !(
                             isVariableDeclaration &&
                             isInLoopHead
@@ -216,8 +221,7 @@ function handle(index: number, text: string, document: vscode.TextDocument): obj
                         isInLoopHead
                     ) &&
                     !isArrowFunctionExpression &&
-                    !isSingleStatement &&
-                    !(isExportDeclaration && isClassDeclaration)
+                    !isSingleStatement
                 ) {
                     detectedResult = 2; // Extra semicolon
                 } else {
@@ -356,7 +360,7 @@ function getSeverity(input: string): vscode.DiagnosticSeverity | null {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-	print('force-semicolon is active (debug: ' + debug + ')');
+	print('force-semicolon version ' + version + ' is active (debug: ' + debug + ')');
     const diagnostics = vscode.languages.createDiagnosticCollection('a');
     const editor = vscode.window.activeTextEditor;
     context.subscriptions.push(diagnostics);

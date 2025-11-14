@@ -181,6 +181,11 @@ This will ignore all semicolon errors in the entire file.
 - Improved documentation
 - Exited beta
 
+## 1.0.1 - 11/14/25
+
+- Fix Typescript class exports getting flagged by oth needing a semicolon and not needing a semicolon
+- Made the code actually semi-readable
+
 # Is this perfect?
 
 No! This project may give false positives/negatives for several scenarios, because I can't test every possible piece of JavaScript! Any contribution or feedback is greatly appreciated.
