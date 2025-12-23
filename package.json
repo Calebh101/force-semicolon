@@ -4,7 +4,7 @@
   "description": "Helps you use semicolons correctly in JavaScript and TypeScript.",
   "repository": "https://github.com/Calebh101/force-semicolon",
   "publisher": "Calebh101",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "icon": "images/iconsmall.png",
   "engines": {
     "vscode": "^1.96.0"
@@ -60,11 +60,6 @@
         "category": "Force Semicolon"
       },
       {
-        "command": "force-semicolon.fix.current.extra",
-        "title": "Fix Extra Semicolons (Current File)",
-        "category": "Force Semicolon"
-      },
-      {
         "command": "force-semicolon.fix.current.all",
         "title": "Fix All Semicolon Issues (Current File)",
         "category": "Force Semicolon"
@@ -80,11 +75,6 @@
         "category": "Force Semicolon"
       },
       {
-        "command": "force-semicolon.fix.open.extra",
-        "title": "Fix Extra Semicolons (All Open Files)",
-        "category": "Force Semicolon"
-      },
-      {
         "command": "force-semicolon.fix.open.all",
         "title": "Fix All Semicolon Issues (All Open Files)",
         "category": "Force Semicolon"
@@ -97,11 +87,6 @@
       {
         "command": "force-semicolon.fix.all.unnecessary",
         "title": "Fix Unnecessary Semicolons (All Files)",
-        "category": "Force Semicolon"
-      },
-      {
-        "command": "force-semicolon.fix.all.extra",
-        "title": "Fix Extra Semicolons (All Files)",
         "category": "Force Semicolon"
       },
       {
@@ -148,27 +133,10 @@
           "default": "Warning",
           "description": "The type of lint triggered when a semicolon is unnecessary."
         },
-        "force-semicolon.extraSemicolonLintType": {
-          "type": "string",
-          "enum": [
-            "Info",
-            "Warning",
-            "Error",
-            "Off"
-          ],
-          "enumDescriptions": [
-            "Show an info dialogue when an extra semicolon is present.",
-            "Show warnings when an extra semicolon is present.",
-            "Show errors when an extra semicolon is present.",
-            "Doesn't show anything when an extra semicolon is present."
-          ],
-          "default": "Warning",
-          "description": "The type of lint triggered when an extra semicolon is present."
-        },
         "force-semicolon.debugMode": {
           "type": "boolean",
           "default": false,
-          "description": "Shows extra logs and reports for extension actions and scanned files. Do not activate this unless necessary, as it floods the console with 500+ logs for each type, file save, file switch, etc. and absolutely decimates performance."
+          "description": "Shows extra logs and reports for extension actions and scanned files. Do not activate this unless you really want to, as it floods the console with 500+ logs for each type, file save, file switch, etc. and absolutely decimates performance."
         }
       }
     }

@@ -6,9 +6,9 @@ This extension helps you use semicolons correctly in JavaScript and TypeScript. 
 
 ## Features
 
-- Missing Semicolon: detects semicolons that are missing from the end of a statement.
-- Unnecessary Semicolon: detects semicolons wrongly used at the end of control statements.
-- Extra Semicolon: detects if you have more than one semicolon at the end of a statement.
+- Missing Semicolon: Detects semicolons that are missing from the end of a statement.
+- Unnecessary Semicolon: Detects semicolons wrongly used at the end of control statements.
+- Extra Semicolon: Detects if you have more than one semicolon at the end of a statement. This is included in Unnecessary Semicolon.
 
 # How to Use
 
@@ -74,126 +74,119 @@ This will ignore all semicolon errors in the entire file.
         - Off: no line
     - Default: Error
 
-- `force-semicolon.extraSemicolonLintType`: setting that decides if VS Code should give an error, warning, or info dialogue for extra semicolons after statements
-    - Options:
-        - Error: red line and notification
-        - Warning: yellow line and notification
-        - Info: blue line
-        - Off: no line
-    - Default: Error
-
 - `force-semicolon.debugMode`: setting that enables/disabled debug mode. This enables action and report logs from this extension. **This is not recommended at all** since this floods the console with 1,000+ logs every single time you type, switch files, and save a file. It does that for each file when VS Code is opened, so it could output **20,000+** logs when started up. As you can imagine, this absolutely *decimates* performance and is highly **not** recommended to turn/keep on.
     - Default: off
 
 ## Commands
 
-- Analyze All Files (`force-semicolon.analyze.all`): analyze all JavaScript and TypeScript files in the workspace (automatically called when the extension is loaded)
-- Fix Missing Semicolons (Current File) (`force-semicolon.fix.current.missing`): fix all Missing Semicolon errors in the current file
-- Fix Unnecessary Semicolons (Current File) (`force-semicolon.fix.current.unnecessary`): fix all Unnecessary Semicolon errors in the current file
-- Fix Extra Semicolons (Current File) (`force-semicolon.fix.current.extra`): fix all Extra Semicolon errors in the current file
-- Fix All Semicolons (Current File) (`force-semicolon.fix.current.all`): fix all semicolon errors (Missing Semicolon, Unnecessary Semicolon, Extra Semicolon) in the current file
-- Fix Missing Semicolons (All Open Files) (`force-semicolon.fix.open.missing`): fix all Missing Semicolon errors in all files that are open in the workspace (even if not actively selected)
-- Fix Unnecessary Semicolons (All Open Files) (`force-semicolon.fix.open.unnecessary`): fix all Unnecessary Semicolon errors in all files that are open in the workspace (even if not actively selected)
-- Fix Extra Semicolons (All Open Files) (`force-semicolon.fix.open.extra`): fix all Extra Semicolon errors in all files that are open in the workspace (even if not actively selected)
-- Fix All Semicolons (All Open Files) (`force-semicolon.fix.open.all`): fix all semicolon errors (Missing Semicolon, Unnecessary Semicolon, Extra Semicolon) in all files that are open in the workspace (even if not actively selected)
-- Fix Missing Semicolons (All Files) (`force-semicolon.fix.all.missing`): fix all Missing Semicolon errors in all files in the current workspace
-- Fix Unnecessary Semicolons (All Files) (`force-semicolon.fix.all.unnecessary`): fix all Unnecessary Semicolon errors in all files in the current workspace
-- Fix Extra Semicolons (All Files) (`force-semicolon.fix.all.extra`): fix all Extra Semicolon errors in all files in the current workspace
-- Fix All Semicolons (All Files) (`force-semicolon.fix.all.all`): fix all semicolon errors (Missing Semicolon, Unnecessary Semicolon, Extra Semicolon) in all files in the current workspace
+- Analyze All Files (`force-semicolon.analyze.all`): analyze all JavaScript and TypeScript files in the workspace (automatically called when the extension is loaded).
+- Fix Missing Semicolons (Current File) (`force-semicolon.fix.current.missing`): fix all Missing Semicolon errors in the current file.
+- Fix Unnecessary Semicolons (Current File) (`force-semicolon.fix.current.unnecessary`): fix all Unnecessary Semicolon errors in the current file.
+- Fix All Semicolons (Current File) (`force-semicolon.fix.current.all`): fix all semicolon errors (Missing Semicolon, Unnecessary Semicolon) in the current file.
+- Fix Missing Semicolons (All Open Files) (`force-semicolon.fix.open.missing`): fix all Missing Semicolon errors in all files that are open in the workspace (even if not actively selected).
+- Fix Unnecessary Semicolons (All Open Files) (`force-semicolon.fix.open.unnecessary`): fix all Unnecessary Semicolon errors in all files that are open in the workspace (even if not actively selected).
+- Fix All Semicolons (All Open Files) (`force-semicolon.fix.open.all`): fix all semicolon errors (Missing Semicolon, Unnecessary Semicolon) in all files that are open in the workspace (even if not actively selected).
+- Fix Missing Semicolons (All Files) (`force-semicolon.fix.all.missing`): fix all Missing Semicolon errors in all files in the current workspace.
+- Fix Unnecessary Semicolons (All Files) (`force-semicolon.fix.all.unnecessary`): fix all Unnecessary Semicolon errors in all files in the current workspace.
+- Fix All Semicolons (All Files) (`force-semicolon.fix.all.all`): fix all semicolon errors (Missing Semicolon, Unnecessary Semicolon) in all files in the current workspace.
 
 # Changelog
 
 ## 0.0.0 - 2/1/25
 
-- Initial release
+- Initial beta.
 
 ## 0.1.0 - 2/1/25
 
-- Implemented `ignore` and `ignore-all` (see description)
-- Fixed a bug that prevented the extension from finding errors
-- Other documentation updates
+- Implemented `ignore` and `ignore-all` (see description).
+- Fixed a bug that prevented the extension from finding errors.
+- Other documentation updates.
 
 ## 0.1.1 - 2/1/25
 
-- Fixed a bug that also scans JSON files
-- Fixed several semicolon detection bugs that gave false positives
+- Fixed a bug that also scans JSON files.
+- Fixed several semicolon detection bugs that gave false positives.
 
 ## 0.1.2 - 2/1/25
 
-- Fixed a few more semicolon detection bugs
+- Fixed a few more semicolon detection bugs.
 
 ## 0.2.0 - 2/1/25
 
-- Added a new setting: force-semicolon.lintType for deciding if VS Code should give an error, warning, or info dialogue (default is error)
-- ignore and ignore-all quick fixes
+- Added a new setting: force-semicolon.lintType for deciding if VS Code should give an error, warning, or info dialogue (default is error).
+- ignore and ignore-all quick fixes.
 
 ## 0.2.1 - 2/1/25
 
-- Fixed a bug affecting .property() lines of code
+- Fixed a bug affecting `.property()` lines of code.
 
 ## 0.2.2 - 2/1/25
 
-- Bug fix affecting chained promises
-- Updated documentation
+- Bug fix affecting chained promises.
+- Updated documentation.
 
 ## 0.2.3 - 2/2/25
 
-- Bug fix affecting lines ending in `[`
+- Bug fix affecting lines ending in `[`..
 - Bug fix affecting multiline comments
 
 ## 0.3.0 - 2/5/25
 
-- Complete overhaul of verification system
-    - We switched over from line-based and text-based scanning to AST-based scanning. This not only improves accuracy, it allows the extension to scan single-line files and accurately find incorrect/missing semicolons.
-- New feature: Unnecessary Semicolon: detects and warns you if you put a semicolon after a control statement (like a psychopath)
-- New feature: Extra Semicolon: detects and warns you if you put an extra semicolon at the end of a statement
-- You can also now turn off Missing Semicolon, Unnecessasy Semicolon, and Extra Semicolon in VS Code settings
+- Complete overhaul of verification system. We switched over from pattern-based scanning to AST-based scanning. This not only improves accuracy, it allows the extension to scan single-line files and accurately find incorrect/missing semicolons.
+- New feature: Unnecessary Semicolon: detects and warns you if you put a semicolon after a control statement (like a psychopath).
+- You can also now turn off Missing Semicolon and Unnecessary Semicolon in VS Code settings.
 
 ## 0.3.1 - 2/5/25
 
-- Bug fix affecting callbacks
-- Improved documentation
+- Bug fix affecting callbacks.
+- Improved documentation.
 
 ## 0.3.2 - 2/5/25
 
-- Bug fix affecting callbacks
+- Bug fix affecting callbacks.
 
 ## 0.3.3 - 2/5/25
 
-- Bug fix affecting callbacks (third in a row, that is impressive)
-- Improved documentation
-- Optimized extension
+- Bug fix affecting callbacks. (third in a row, that is impressive)
+- Improved documentation.
+- Optimized extension.
 
 ## 0.3.4 - 2/5/25
 
-- Improved documentation
+- Improved documentation.
 
 ## 0.3.5 - 2/12/25
 
-- Added commands to fix files
-- Fixed bug affecting exports
-- Fixed a bug affecting single-line control statements
+- Added commands to fix files.
+- Fixed bug affecting exports.
+- Fixed a bug affecting single-line control statements.
 
 ## 1.0.0 - 3/16/25
 
-- Added detection for TypeScript interfaces
-- Added detection for functions in objects or arrays (also called object properties)
-- Improved documentation
-- Exited beta
+- Added detection for TypeScript interfaces.
+- Added detection for functions in objects or arrays (also called object properties).
+- Improved documentation.
+- Exited beta.
 
 ## 1.0.1 - 11/14/25
 
-- Fix Typescript class exports getting flagged by oth needing a semicolon and not needing a semicolon
-- Made the code actually semi-readable
+- Fix Typescript class exports getting flagged by oth needing a semicolon and not needing a semicolon.
+- Made the code actually semi-readable.
+
+## 1.0.2 - 12/22/25
+
+- Transition to a more systematic approach, so now false positives should be lessened.
+- "Extra semicolon" is now merged into "unnecessary semicolon".
 
 # Is this perfect?
 
-No! This project may give false positives/negatives for several scenarios, because I can't test every possible piece of JavaScript! Any contribution or feedback is greatly appreciated.
+No! You're likely to find several problems with my extension. Any contribution (or even just pointing out issues) is greatly appreciated!
 
 # Known issues
 
-- HTML is currently not supported
+- HTML is currently not supported.
+- String literals may not be flagged.
 
 # Support
 
-For feedback and support, email me at [calebh101dev@icloud.com](mailto:calebh101dev@icloud.com).
+For feedback and support, join my [Discord server](https://discord.gg/gbZyPuqZ6n).
