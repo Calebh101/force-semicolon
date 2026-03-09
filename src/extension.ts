@@ -1,7 +1,8 @@
+/* eslint-disable curly */
+
 import * as vscode from 'vscode';
 import { parse } from "@babel/parser";
 import traverse from "@babel/traverse";
-import babel from '@babel/core';
 import { NodePath } from '@babel/traverse';
 
 var debug: boolean = process.env.DEBUG !== null;
@@ -75,7 +76,7 @@ function classify(path: NodePath): number {
     if (type === "ExpressionStatement" && 'directive' in path.node) return 0;
 
     if (SEMICOLON_STATEMENTS.has(type)) {
-        if (type == "VariableDeclaration" && path.parentPath) {
+        if (type === "VariableDeclaration" && path.parentPath) {
             if (path.parentPath.isForStatement() || path.parentPath.isForInStatement() || path.parentPath.isForOfStatement()) {
                 return 0; // Variable declaration in loop head
             }
@@ -155,7 +156,15 @@ function parseAst(document: vscode.TextDocument): any {
     }
 }
 
-function handle(index: number, text: string, document: vscode.TextDocument): object {
+function handle(index: number, text: string, document: vscode.TextDocument, ignored: {
+    uri: string;
+}[]): object {
+    if (ignored.some(x => {
+        const doc = document.uri.toString();
+        const ignored = x.uri;
+        return doc === ignored || doc.startsWith(ignored + '/');
+    })) return {diagnostics: []};
+
     var diagnosticsList: Array<any> = [];
     var statements: Array<any> = [];
     var ast = parseAst(document);
@@ -280,44 +289,73 @@ function getSeverity(input: string): vscode.DiagnosticSeverity | null {
     }
 }
 
+function getIgnored(context: vscode.ExtensionContext) {
+    return context.workspaceState.get<Array<{uri: string}>>("ignore") || [];
+}
+
+function ignoreWorkspace(context: vscode.ExtensionContext, uri: vscode.Uri): boolean {
+    const data = getIgnored(context);
+    const exists = data.some(x => x.uri === uri.toString());
+
+    if (exists) {
+        const filtered = data.filter(x => x.uri !== uri.toString());
+        context.workspaceState.update("ignore", filtered);
+    } else {
+        data.push({uri: uri.toString()});
+        context.workspaceState.update("ignore", data);
+    }
+
+    return exists; // If it existed before, so true = was removed
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	print('force-semicolon version ' + version + ' is active (debug: ' + debug + ')');
     const diagnostics = vscode.languages.createDiagnosticCollection('a');
     const editor = vscode.window.activeTextEditor;
     context.subscriptions.push(diagnostics);
 
+    context.subscriptions.push(
+        vscode.commands.registerCommand("force-semicolon.ignore.workspace", async (uri: vscode.Uri) => {
+            action("force-semicolon.ignore.workspace");
+            const result = ignoreWorkspace(context, uri);
+            const stat = await vscode.workspace.fs.stat(uri);
+            vscode.window.showInformationMessage(`${stat.type === vscode.FileType.Directory ? "Directory" : "File"} ${uri.path} ${result ? "unignored" : "ignored"}.`);
+            analyzeAll(context, diagnostics);
+        }),
+    );
+
     if (editor) {
         action('extension.active');
-        updateDiagnostics(editor.document, diagnostics);
-        analyzeAll(diagnostics);
+        updateDiagnostics(context, editor.document, diagnostics);
+        analyzeAll(context, diagnostics);
     }
 
     vscode.workspace.onDidChangeTextDocument(event => {
         const editor = vscode.window.activeTextEditor;
-        if (editor) updateDiagnostics(editor.document, diagnostics);
+        if (editor) updateDiagnostics(context, editor.document, diagnostics);
     });
 
     vscode.workspace.onDidOpenTextDocument((document) => {
         action('workspace.onDidOpenTextDocument');
-        updateDiagnostics(document, diagnostics);
+        updateDiagnostics(context, document, diagnostics);
     });
 
     vscode.window.onDidChangeActiveTextEditor(editor => {
         action('window.onDidChangeActivateTextEditor');
-        if (editor) updateDiagnostics(editor.document, diagnostics);
+        if (editor) updateDiagnostics(context, editor.document, diagnostics);
     });
 
     vscode.workspace.onDidCreateFiles((event) => {
-        fileAction('workspace.onDidCreateFiles', diagnostics);
+        fileAction(context, 'workspace.onDidCreateFiles', diagnostics);
     });
 
     vscode.workspace.onDidRenameFiles((event) => {
-        fileAction('workspace.onDidRenameFiles', diagnostics);
+        fileAction(context, 'workspace.onDidRenameFiles', diagnostics);
     });
 
     context.subscriptions.push(vscode.commands.registerCommand('force-semicolon.analyze.all', () => {
         action('command.activate.analyze.all');
-        analyzeAll(diagnostics);
+        analyzeAll(context, diagnostics);
     }));
 
     const fixCommands = [
@@ -399,16 +437,16 @@ async function getAllDocuments(type: 'current' | 'open' | 'all' | string): Promi
     }
 }
 
-function fileAction(name: string, diagnostics: vscode.DiagnosticCollection) {
+function fileAction(context: vscode.ExtensionContext, name: string, diagnostics: vscode.DiagnosticCollection) {
     action(name + " (fileAction: " + allowFileAction + ")");
-    if (allowFileAction) analyzeAll(diagnostics);
+    if (allowFileAction) analyzeAll(context, diagnostics);
 }
 
-function analyzeAll(diagnostics: vscode.DiagnosticCollection) {
+function analyzeAll(context: vscode.ExtensionContext, diagnostics: vscode.DiagnosticCollection) {
     vscode.workspace.findFiles('**/*.{js,ts}', '**/node_modules/**').then(files => {
         files.forEach(fileUri => {
             vscode.workspace.openTextDocument(fileUri).then(document => {
-                updateDiagnostics(document, diagnostics);
+                updateDiagnostics(context, document, diagnostics);
             });
         });
     });
@@ -432,7 +470,7 @@ function addReport(index: number, type: string, input?: string | object) {
     }
 }
 
-function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.DiagnosticCollection) {
+function updateDiagnostics(context: vscode.ExtensionContext, document: vscode.TextDocument, diagnostics: vscode.DiagnosticCollection) {
     if (!allowedLanguages.includes(document.languageId)) return;
     report = defaultReport;
 
@@ -448,7 +486,7 @@ function updateDiagnostics(document: vscode.TextDocument, diagnostics: vscode.Di
     var missingSeverity: string = config.get<string>('missingSemicolonLintType', defaultSeverity) ?? defaultSeverity;
     var unnecessarySeverity: string = config.get<string>('unnecessarySemicolonLintType', defaultSeverity) ?? defaultSeverity;
 
-    const result: Record<string, any> = handle(-1, "", document);
+    const result: Record<string, any> = handle(-1, "", document, getIgnored(context));
     diagnosticsList = result.diagnostics;
     var diagnosticsS: Array<vscode.Diagnostic> = [];
 
@@ -589,7 +627,7 @@ class SemicolonCodeActionProvider implements vscode.CodeActionProvider {
                     const endOffset = document.offsetAt(diagnostic.range.end);
                     const text = document.getText(diagnostic.range);
 
-                    const range = text.trim() == ';' ? new vscode.Range(
+                    const range = text.trim() === ';' ? new vscode.Range(
                         document.positionAt(startOffset),
                         document.positionAt(startOffset + 1),
                     ) : new vscode.Range(

@@ -93,8 +93,21 @@
         "command": "force-semicolon.fix.all.all",
         "title": "Fix All Semicolon Issues (All Files)",
         "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.ignore.workspace",
+        "title": "Ignore/Unignore Semicolons For This File/Folder",
+        "category": "Force Semicolon"
       }
     ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "force-semicolon.ignore.workspace",
+          "group": "z_forceSemicolon@1"
+        }
+      ]
+    },
     "configuration": {
       "type": "object",
       "title": "Force Semicolon",
@@ -153,7 +166,8 @@
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "run": "npm run compile && code --extensionDevelopmentPath=$(pwd)"
   },
   "devDependencies": {
     "@babel/core": "^7.26.10",
