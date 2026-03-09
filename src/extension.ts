@@ -158,12 +158,19 @@ function parseAst(document: vscode.TextDocument): any {
 
 function handle(index: number, text: string, document: vscode.TextDocument, ignored: {
     uri: string;
+    ignore: boolean;
 }[]): object {
-    if (ignored.some(x => {
+    const i = ignored.map(x => {
         const doc = document.uri.toString();
         const ignored = x.uri;
-        return doc === ignored || doc.startsWith(ignored + '/');
-    })) return {diagnostics: []};
+        return {match: doc === ignored || doc.startsWith(ignored + '/'), ignore: x.ignore};
+    }).filter(x => x.match);
+
+    if (i.some(x => x.ignore === false)) {
+        // Continue
+    } else if (i.some(x => x.ignore === true)) {
+        return { diagnostics: [] };
+    }
 
     var diagnosticsList: Array<any> = [];
     var statements: Array<any> = [];
@@ -290,22 +297,32 @@ function getSeverity(input: string): vscode.DiagnosticSeverity | null {
 }
 
 function getIgnored(context: vscode.ExtensionContext) {
-    return context.workspaceState.get<Array<{uri: string}>>("ignore") || [];
+    return context.workspaceState.get<Array<{uri: string, ignore: boolean}>>("ignore") || [];
 }
 
 function ignoreWorkspace(context: vscode.ExtensionContext, uri: vscode.Uri): boolean {
     const data = getIgnored(context);
     const exists = data.some(x => x.uri === uri.toString());
 
+    const anyContains = data.some(x => {
+        const doc = uri.toString();
+        const ignored = x.uri;
+        return doc === ignored || doc.startsWith(ignored + '/');
+    });
+
     if (exists) {
         const filtered = data.filter(x => x.uri !== uri.toString());
         context.workspaceState.update("ignore", filtered);
-    } else {
-        data.push({uri: uri.toString()});
+        return false;
+    } else if (anyContains) {
+        data.push({uri: uri.toString(), ignore: false});
         context.workspaceState.update("ignore", data);
+        return false;
+    } else {
+        data.push({uri: uri.toString(), ignore: true});
+        context.workspaceState.update("ignore", data);
+        return true; // ignored
     }
-
-    return exists; // If it existed before, so true = was removed
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -319,7 +336,7 @@ export function activate(context: vscode.ExtensionContext) {
             action("force-semicolon.ignore.workspace");
             const result = ignoreWorkspace(context, uri);
             const stat = await vscode.workspace.fs.stat(uri);
-            vscode.window.showInformationMessage(`${stat.type === vscode.FileType.Directory ? "Directory" : "File"} ${uri.path} ${result ? "unignored" : "ignored"}.`);
+            vscode.window.showInformationMessage(`${result ? "Ignored" : "Unignored"} ${stat.type === vscode.FileType.Directory ? "directory" : "file"} ${uri.path}.`);
             analyzeAll(context, diagnostics);
         }),
     );

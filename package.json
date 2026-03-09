@@ -4,7 +4,7 @@
   "description": "Helps you use semicolons correctly in JavaScript and TypeScript.",
   "repository": "https://github.com/Calebh101/force-semicolon",
   "publisher": "Calebh101",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "icon": "images/iconsmall.png",
   "engines": {
     "vscode": "^1.96.0"
@@ -96,7 +96,7 @@
       },
       {
         "command": "force-semicolon.ignore.workspace",
-        "title": "Ignore/Unignore Semicolons For This File/Folder",
+        "title": "Ignore/Unignore Semicolon Issues For This File/Folder",
         "category": "Force Semicolon"
       }
     ],

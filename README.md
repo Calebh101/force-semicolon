@@ -16,7 +16,7 @@ This extension helps you use semicolons correctly in JavaScript and TypeScript. 
 
 ### Ignore a statement
 
-To ignore a statement: Simply insert this comment above the line, like so:
+To ignore a statement, simply insert this comment above the line, like so:
 
 ```javascript
 // force-semicolon: ignore
@@ -46,15 +46,30 @@ This will successfully ignore `console.log("test")`.
 
 ### Ignore a file
 
-To ignore a file: Simply insert this comment anywhere in the file, like so:
+To ignore a file, simply insert this comment anywhere in the file, like so:
 
 ```javascript
 // force-semicolon: ignore-all
-function("function without a semicolon")
-function("another function without a semicolon")
+f("function without a semicolon")
+f("another function without a semicolon")
 ```
 
 This will ignore all semicolon errors in the entire file.
+
+### Ignore a file (workspace)
+
+You can ignore a file or folder per workspace by right-clicking in the Explorer and selecting `Ignore/Unignore Semicolon Issues For This File/Folder`. This will store the file in your workspace settings, and will ignore or unignore the file's semicolon issues.
+
+You can also ignore directories. This will ignore all files in the directory, including in subdirectories. However, you can choose to unignore files/directories *inside* a directory. This will override the higher directory. You can also do this for subdirectories, like so:
+
+```js
+- parentDir1       // ignored
+    - parentDir2   // unignored
+        - file1.ts // analyzed
+    - file2.ts     // not analyzed
+```
+
+So here, you can ignore `parentDir1`, then unignore `parentDir2` explicitly. `file1.ts` will be analyzed, but `file2.ts` will be ignored.
 
 ## Settings
 
