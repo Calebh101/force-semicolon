@@ -64,7 +64,7 @@ You can also ignore directories. This will ignore all files in the directory, in
 
 ```js
 - parentDir1       // ignored
-    - parentDir2   // unignored
+    - parentDir2   // unignored (explicitly)
         - file1.ts // analyzed
     - file2.ts     // not analyzed
 ```

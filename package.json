@@ -98,13 +98,23 @@
         "command": "force-semicolon.ignore.workspace",
         "title": "Ignore/Unignore Semicolon Issues For This File/Folder",
         "category": "Force Semicolon"
+      },
+      {
+        "command": "force-semicolon.ignore.workspace.clear",
+        "title": "Clear Force Semicolon Ignored List (Workspace)",
+        "category": "Force Semicolon"
       }
     ],
     "menus": {
       "explorer/context": [
         {
           "command": "force-semicolon.ignore.workspace",
-          "group": "z_forceSemicolon@1"
+          "group": "z_forceSemicolon@1",
+          "when": "resourceScheme == file"
+        },
+        {
+          "command": "force-semicolon.ignore.workspace.clear",
+          "group": "z_forceSemicolon@2"
         }
       ]
     },

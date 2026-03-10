@@ -156,14 +156,23 @@ function parseAst(document: vscode.TextDocument): any {
     }
 }
 
+function getUriId(uri: vscode.Uri): string {
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!folder) return uri.fsPath;
+
+    if (uri.fsPath === folder.uri.fsPath) return `/${folder.name}`;
+    const rel = vscode.workspace.asRelativePath(uri, false);
+    return `/${folder.name}/${rel}`;
+}
+
 function handle(index: number, text: string, document: vscode.TextDocument, ignored: {
     uri: string;
     ignore: boolean;
 }[]): object {
     const i = ignored.map(x => {
-        const doc = document.uri.toString();
+        const doc = getUriId(document.uri);
         const ignored = x.uri;
-        return {match: doc === ignored || doc.startsWith(ignored + '/'), ignore: x.ignore};
+        return {match: x.uri === "/" || doc === ignored || doc.startsWith(ignored + '/'), ignore: x.ignore};
     }).filter(x => x.match);
 
     if (i.some(x => x.ignore === false)) {
@@ -302,24 +311,24 @@ function getIgnored(context: vscode.ExtensionContext) {
 
 function ignoreWorkspace(context: vscode.ExtensionContext, uri: vscode.Uri): boolean {
     const data = getIgnored(context);
-    const exists = data.some(x => x.uri === uri.toString());
+    const exists = data.some(x => x.uri === getUriId(uri));
 
     const anyContains = data.some(x => {
-        const doc = uri.toString();
+        const doc = getUriId(uri);
         const ignored = x.uri;
         return doc === ignored || doc.startsWith(ignored + '/');
     });
 
     if (exists) {
-        const filtered = data.filter(x => x.uri !== uri.toString());
+        const filtered = data.filter(x => x.uri !== getUriId(uri));
         context.workspaceState.update("ignore", filtered);
         return false;
     } else if (anyContains) {
-        data.push({uri: uri.toString(), ignore: false});
+        data.push({uri: getUriId(uri), ignore: false});
         context.workspaceState.update("ignore", data);
         return false;
     } else {
-        data.push({uri: uri.toString(), ignore: true});
+        data.push({uri: getUriId(uri), ignore: true});
         context.workspaceState.update("ignore", data);
         return true; // ignored
     }
@@ -333,10 +342,18 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand("force-semicolon.ignore.workspace", async (uri: vscode.Uri) => {
-            action("force-semicolon.ignore.workspace");
+            const status = uri instanceof vscode.Uri && uri;
+            action("force-semicolon.ignore.workspace", status);
+            if (!status) return;
+
             const result = ignoreWorkspace(context, uri);
             const stat = await vscode.workspace.fs.stat(uri);
-            vscode.window.showInformationMessage(`${result ? "Ignored" : "Unignored"} ${stat.type === vscode.FileType.Directory ? "directory" : "file"} ${uri.path}.`);
+            vscode.window.showInformationMessage(`${result ? "Ignored" : "Unignored"} ${stat.type === vscode.FileType.Directory ? "directory" : "file"} ${getUriId(uri)}.`);
+            analyzeAll(context, diagnostics);
+        }),
+        vscode.commands.registerCommand("force-semicolon.ignore.workspace.clear", async (uri: vscode.Uri) => {
+            context.workspaceState.update("ignore", []);
+            vscode.window.showInformationMessage("Ignored for workspace list cleared.");
             analyzeAll(context, diagnostics);
         }),
     );
@@ -436,7 +453,7 @@ async function getAllDocuments(type: 'current' | 'open' | 'all' | string): Promi
                 }
 
                 if (uri) {
-                    const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uri.toString());
+                    const document = vscode.workspace.textDocuments.find(doc => getUriId(doc.uri) === getUriId(uri));
                     if (document) {
                         return document;
                     }
